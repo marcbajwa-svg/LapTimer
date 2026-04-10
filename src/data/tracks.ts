@@ -1,6 +1,43 @@
-import { Locale, TrackDefinition } from "../types";
+import { CurrentLocation, Locale, TrackDefinition } from "../types";
+import { distanceMeters } from "../utils/location";
 
 export const presetTracks: TrackDefinition[] = [
+  {
+    id: "hockenheimring",
+    name: { en: "Hockenheimring", de: "Hockenheimring" },
+    markerLabel: {
+      en: "Start / finish on the main straight",
+      de: "Start / Ziel auf der Hauptgeraden",
+    },
+    direction: "clockwise",
+    minimumLapMs: 95_000,
+    latitude: 49.3277,
+    longitude: 8.5655,
+    splitMarkers: [
+      {
+        id: "hockenheimring-s1",
+        label: { en: "Sector 1", de: "Sektor 1" },
+        latitude: 49.3293,
+        longitude: 8.5713,
+        radiusMeters: 55,
+      },
+      {
+        id: "hockenheimring-s2",
+        label: { en: "Sector 2", de: "Sektor 2" },
+        latitude: 49.3238,
+        longitude: 8.5732,
+        radiusMeters: 55,
+      },
+      {
+        id: "hockenheimring-s3",
+        label: { en: "Sector 3", de: "Sektor 3" },
+        latitude: 49.3255,
+        longitude: 8.5607,
+        radiusMeters: 55,
+      },
+    ],
+    source: "preset",
+  },
   {
     id: "rheinring-south",
     name: { en: "Rheinring South", de: "Rheinring Sued" },
@@ -110,6 +147,40 @@ export const presetTracks: TrackDefinition[] = [
     source: "preset",
   },
 ];
+
+const SUGGESTION_RADIUS_METERS = 6_000;
+
+export function findNearbyTrack(location: CurrentLocation, tracks: TrackDefinition[]) {
+  let bestMatch: { track: TrackDefinition; distanceMeters: number } | null = null;
+
+  for (const track of tracks) {
+    if (track.source !== "preset") {
+      continue;
+    }
+
+    const distance = distanceMeters(location, track);
+    if (distance > SUGGESTION_RADIUS_METERS) {
+      continue;
+    }
+
+    if (!bestMatch || distance < bestMatch.distanceMeters) {
+      bestMatch = {
+        track,
+        distanceMeters: distance,
+      };
+    }
+  }
+
+  return bestMatch;
+}
+
+export function formatTrackDistance(distanceMetersValue: number): string {
+  if (distanceMetersValue < 1000) {
+    return `${Math.round(distanceMetersValue)} m`;
+  }
+
+  return `${(distanceMetersValue / 1000).toFixed(1)} km`;
+}
 
 export function buildCustomTrack(locale: Locale, latitude: number, longitude: number): TrackDefinition {
   return {

@@ -16,6 +16,8 @@ type TrackSetupScreenProps = {
   permissionState: PermissionState;
   currentPositionLabel: string;
   presetTracks: TrackDefinition[];
+  nearbyTrack: TrackDefinition | null;
+  nearbyTrackDistance: string | null;
   onNavigate: (screen: ScreenId) => void;
   onRequestLocationPermission: () => void;
   onSelectTrack: (track: TrackDefinition) => void;
@@ -29,6 +31,8 @@ export function TrackSetupScreen({
   permissionState,
   currentPositionLabel,
   presetTracks,
+  nearbyTrack,
+  nearbyTrackDistance,
   onNavigate,
   onRequestLocationPermission,
   onSelectTrack,
@@ -57,6 +61,37 @@ export function TrackSetupScreen({
         />
       </SectionCard>
 
+      <SectionCard title={text.setup.nearbyTrackTitle} subtitle={text.setup.nearbyTrackSubtitle}>
+        {nearbyTrack ? (
+          <View style={styles.suggestionBlock}>
+            <View style={styles.suggestionCard}>
+              <Text style={styles.trackName}>{nearbyTrack.name[locale]}</Text>
+              <Text style={styles.trackMeta}>{nearbyTrack.markerLabel[locale]}</Text>
+              <Text style={styles.trackMeta}>
+                {text.setup.nearbyTrackDistance}: {nearbyTrackDistance}
+              </Text>
+            </View>
+            <PrimaryButton label={text.setup.useSuggestedTrack} tone="accent" onPress={() => onSelectTrack(nearbyTrack)} />
+            <PrimaryButton
+              label={text.setup.setManualStartPoint}
+              tone="soft"
+              disabled={permissionState !== "granted" || currentPositionLabel === "--"}
+              onPress={onUseCurrentPosition}
+            />
+          </View>
+        ) : (
+          <View style={styles.suggestionBlock}>
+            <Text style={styles.emptyState}>{text.setup.nearbyTrackNone}</Text>
+            <PrimaryButton
+              label={text.setup.setManualStartPoint}
+              tone="soft"
+              disabled={permissionState !== "granted" || currentPositionLabel === "--"}
+              onPress={onUseCurrentPosition}
+            />
+          </View>
+        )}
+      </SectionCard>
+
       <SectionCard title={text.setup.trackLibraryTitle} subtitle={text.setup.trackLibrarySubtitle}>
         <View style={styles.trackList}>
           {presetTracks.map((track) => {
@@ -74,12 +109,6 @@ export function TrackSetupScreen({
             );
           })}
         </View>
-        <PrimaryButton
-          label={text.setup.useCurrentPosition}
-          tone="soft"
-          disabled={permissionState !== "granted" || currentPositionLabel === "--"}
-          onPress={onUseCurrentPosition}
-        />
       </SectionCard>
 
       <SectionCard title={text.setup.selectedTrackTitle} subtitle={text.setup.selectedTrackSubtitle}>
@@ -145,6 +174,15 @@ const styles = StyleSheet.create({
   trackList: {
     gap: theme.spacing.sm,
   },
+  suggestionBlock: {
+    gap: theme.spacing.sm,
+  },
+  suggestionCard: {
+    backgroundColor: theme.colors.panelSoft,
+    borderRadius: 18,
+    padding: theme.spacing.md,
+    gap: theme.spacing.xs,
+  },
   trackCard: {
     backgroundColor: theme.colors.panelSoft,
     borderRadius: 18,
@@ -164,5 +202,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
+  },
+  emptyState: {
+    color: theme.colors.textStrong,
+    fontSize: 15,
+    lineHeight: 22,
   },
 });

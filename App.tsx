@@ -5,7 +5,7 @@ import { SafeAreaView, StyleSheet } from "react-native";
 import { useEffect, useRef, useState } from "react";
 
 import { AppShell } from "./src/components/AppShell";
-import { presetTracks, buildCustomTrack } from "./src/data/tracks";
+import { presetTracks, buildCustomTrack, findNearbyTrack, formatTrackDistance } from "./src/data/tracks";
 import { getPreviewSession } from "./src/data/sessionPreview";
 import { copy } from "./src/i18n";
 import { HomeScreen } from "./src/screens/HomeScreen";
@@ -206,6 +206,7 @@ export default function App() {
   const locationSummary = currentLocation
     ? `${currentLocation.latitude.toFixed(5)}, ${currentLocation.longitude.toFixed(5)}`
     : "--";
+  const nearbyTrackMatch = currentLocation ? findNearbyTrack(currentLocation, presetTracks) : null;
 
   const session = {
     ...buildSessionPreview(seedSession, liveState, locale),
@@ -234,6 +235,8 @@ export default function App() {
             selectedTrack={selectedTrack}
             permissionState={permissionState}
             currentPositionLabel={locationSummary}
+            nearbyTrack={nearbyTrackMatch?.track ?? null}
+            nearbyTrackDistance={nearbyTrackMatch ? formatTrackDistance(nearbyTrackMatch.distanceMeters) : null}
             onNavigate={setActiveScreen}
             onRequestLocationPermission={requestLocationPermission}
             onSelectTrack={setSelectedTrack}

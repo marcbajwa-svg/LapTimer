@@ -60,6 +60,12 @@ type Dictionary = {
     locationGranted: string;
     locationDenied: string;
     currentPositionLabel: string;
+    nearbyTrackTitle: string;
+    nearbyTrackSubtitle: string;
+    nearbyTrackNone: string;
+    nearbyTrackDistance: string;
+    useSuggestedTrack: string;
+    setManualStartPoint: string;
   };
   live: ScreenText & {
     recordingStatusTitle: string;
@@ -159,6 +165,12 @@ export const copy: Record<Locale, Dictionary> = {
       locationGranted: "Location access granted",
       locationDenied: "Location access denied",
       currentPositionLabel: "Current position",
+      nearbyTrackTitle: "Nearby Track Suggestion",
+      nearbyTrackSubtitle: "If you are already at a circuit, the app can suggest the closest known track before you set your own start point.",
+      nearbyTrackNone: "No known race track found nearby",
+      nearbyTrackDistance: "Distance",
+      useSuggestedTrack: "Use Suggested Track",
+      setManualStartPoint: "Set Manual Start Point",
     },
     live: {
       eyebrow: "Live Session",
@@ -268,6 +280,12 @@ export const copy: Record<Locale, Dictionary> = {
       locationGranted: "Standortfreigabe aktiv",
       locationDenied: "Standortfreigabe abgelehnt",
       currentPositionLabel: "Aktuelle Position",
+      nearbyTrackTitle: "Streckenvorschlag in der Naehe",
+      nearbyTrackSubtitle: "Wenn du schon an einer Rennstrecke bist, schlaegt die App dir zuerst die naechste bekannte Strecke vor, bevor du einen eigenen Startpunkt setzt.",
+      nearbyTrackNone: "Keine bekannte Rennstrecke in der Naehe gefunden",
+      nearbyTrackDistance: "Entfernung",
+      useSuggestedTrack: "Vorgeschlagene Strecke nutzen",
+      setManualStartPoint: "Manuellen Startpunkt setzen",
     },
     live: {
       eyebrow: "Live-Session",
