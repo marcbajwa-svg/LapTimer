@@ -51,33 +51,29 @@ fun LapTimerNativeApp() {
         containerColor = Color(0xFFF4EFE4),
         bottomBar = {
             NavigationBar(containerColor = Color(0xFFFFF9EF)) {
-                BottomNavigationItem(
-                    screen = Screen.Home,
-                    activeScreen = activeScreen,
-                    label = "Start",
-                    onSelect = { activeScreen = Screen.Home },
+                NavigationBarItem(
+                    selected = activeScreen == Screen.Home,
+                    onClick = { activeScreen = Screen.Home },
                     icon = { Icon(Icons.Outlined.Home, contentDescription = null) },
+                    label = { Text("Start") },
                 )
-                BottomNavigationItem(
-                    screen = Screen.Setup,
-                    activeScreen = activeScreen,
-                    label = "Setup",
-                    onSelect = { activeScreen = Screen.Setup },
+                NavigationBarItem(
+                    selected = activeScreen == Screen.Setup,
+                    onClick = { activeScreen = Screen.Setup },
                     icon = { Icon(Icons.Outlined.Map, contentDescription = null) },
+                    label = { Text("Setup") },
                 )
-                BottomNavigationItem(
-                    screen = Screen.Live,
-                    activeScreen = activeScreen,
-                    label = "Live",
-                    onSelect = { activeScreen = Screen.Live },
+                NavigationBarItem(
+                    selected = activeScreen == Screen.Live,
+                    onClick = { activeScreen = Screen.Live },
                     icon = { Icon(Icons.Outlined.Speed, contentDescription = null) },
+                    label = { Text("Live") },
                 )
-                BottomNavigationItem(
-                    screen = Screen.Summary,
-                    activeScreen = activeScreen,
-                    label = "Auswertung",
-                    onSelect = { activeScreen = Screen.Summary },
+                NavigationBarItem(
+                    selected = activeScreen == Screen.Summary,
+                    onClick = { activeScreen = Screen.Summary },
                     icon = { Icon(Icons.Outlined.Dashboard, contentDescription = null) },
+                    label = { Text("Auswertung") },
                 )
             }
         },
@@ -105,22 +101,6 @@ fun LapTimerNativeApp() {
             }
         }
     }
-}
-
-@Composable
-private fun BottomNavigationItem(
-    screen: Screen,
-    activeScreen: Screen,
-    label: String,
-    onSelect: () -> Unit,
-    icon: @Composable () -> Unit,
-) {
-    NavigationBarItem(
-        selected = screen == activeScreen,
-        onClick = onSelect,
-        icon = icon,
-        label = { Text(label) },
-    )
 }
 
 @Composable
@@ -179,8 +159,8 @@ private fun SetupScreen(
                     Text(nearbyTrack.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text(nearbyTrack.markerLabel, color = Color(0xFF5F5A52))
                     Text(nearbyTrack.distanceLabel ?: "--", color = Color(0xFF345F49), fontWeight = FontWeight.Bold)
-                    PrimaryAction("Use suggested track") { onSelectTrack(nearbyTrack) }
-                    SecondaryAction("Set manual start point") {}
+                    PrimaryAction(label = "Use suggested track", onClick = { onSelectTrack(nearbyTrack) })
+                    SecondaryAction(label = "Set manual start point", onClick = {})
                 }
             }
         }
