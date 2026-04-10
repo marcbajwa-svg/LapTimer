@@ -39,6 +39,12 @@
     },
     "web": {
       "bundler": "metro"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6e80e2ff-a268-4330-bdc3-213512e71bb7"
     }
   }
 }
