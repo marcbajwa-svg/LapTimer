@@ -1,4 +1,5 @@
 import { StatusBar } from "expo-status-bar";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { SafeAreaView, StyleSheet } from "react-native";
 import { useEffect, useState } from "react";
 
@@ -35,6 +36,10 @@ export default function App() {
   useEffect(() => {
     setPermissionState("unknown");
     setCurrentLocation(null);
+  }, []);
+
+  useEffect(() => {
+    void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
   }, []);
 
   useEffect(() => {
