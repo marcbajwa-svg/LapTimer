@@ -16,6 +16,15 @@ export function formatSessionClock(ms: number): string {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
+export function formatSignedDuration(ms: number): string {
+  if (ms === 0) {
+    return "+00:00.00";
+  }
+
+  const sign = ms > 0 ? "+" : "-";
+  return `${sign}${formatDuration(Math.abs(ms))}`;
+}
+
 function pad(value: number): string {
   return String(value).padStart(2, "0");
 }

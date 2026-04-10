@@ -16,6 +16,7 @@ type Dictionary = {
     currentLap: string;
     lastLap: string;
     bestLap: string;
+    deltaToBest: string;
     sessionTime: string;
     totalLaps: string;
     marker: string;
@@ -102,6 +103,7 @@ export const copy: Record<Locale, Dictionary> = {
       currentLap: "Current Lap",
       lastLap: "Last Lap",
       bestLap: "Best Lap",
+      deltaToBest: "Delta To Best",
       sessionTime: "Session Time",
       totalLaps: "Total Laps",
       marker: "Marker",
@@ -210,6 +212,7 @@ export const copy: Record<Locale, Dictionary> = {
       currentLap: "Aktuelle Runde",
       lastLap: "Letzte Runde",
       bestLap: "Beste Runde",
+      deltaToBest: "Delta zur Bestzeit",
       sessionTime: "Sessionzeit",
       totalLaps: "Runden gesamt",
       marker: "Marker",

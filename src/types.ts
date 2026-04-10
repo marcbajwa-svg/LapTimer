@@ -14,6 +14,7 @@ export type SessionPreview = {
   trackName: string;
   mode: string;
   currentLap: string;
+  currentDelta: string;
   lastLap: string;
   bestLap: string;
   sessionTime: string;

@@ -1,6 +1,6 @@
 import { Lap, LiveSessionState, Locale, SessionPreview } from "../types";
 import { copy } from "../i18n";
-import { formatDuration, formatSessionClock } from "./time";
+import { formatDuration, formatSessionClock, formatSignedDuration } from "./time";
 
 export function createInitialLiveState(seed: SessionPreview): LiveSessionState {
   return {
@@ -58,6 +58,7 @@ export function buildSessionPreview(
   return {
     ...seed,
     currentLap: formatDuration(state.currentLapTimeMs || 0),
+    currentDelta: buildCurrentDelta(state),
     lastLap: state.lastLapTimeMs ? formatDuration(state.lastLapTimeMs) : seed.lastLap,
     bestLap: bestLapTimeMs ? formatDuration(bestLapTimeMs) : seed.bestLap,
     sessionTime: formatSessionClock(state.sessionTimeMs),
@@ -66,6 +67,14 @@ export function buildSessionPreview(
     laps: state.laps.length > 0 ? state.laps : seed.laps,
     gpsStatus: statusCopy(state.status, locale, seed.gpsStatus),
   };
+}
+
+function buildCurrentDelta(state: LiveSessionState): string {
+  if (state.bestLapTimeMs === null) {
+    return "--";
+  }
+
+  return formatSignedDuration(state.currentLapTimeMs - state.bestLapTimeMs);
 }
 
 function statusCopy(status: LiveSessionState["status"], locale: Locale, idleFallback: string): string {
