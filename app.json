@@ -27,6 +27,11 @@
         "ACCESS_FINE_LOCATION"
       ]
     },
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    },
     "web": {
       "bundler": "metro"
     }
