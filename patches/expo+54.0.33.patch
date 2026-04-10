@@ -1,0 +1,12 @@
+diff --git a/node_modules/expo/src/Expo.fx.tsx b/node_modules/expo/src/Expo.fx.tsx
+index 4d8e338..e2981f6 100644
+--- a/node_modules/expo/src/Expo.fx.tsx
++++ b/node_modules/expo/src/Expo.fx.tsx
+@@ -1,6 +1,6 @@
+ // load expo-asset immediately to set a custom `source` transformer in React Native
+ import './winter';
+-import './async-require';
++import './async-require/index';
+ import 'expo-asset';
+ import 'expo/virtual/rsc';
+ 
