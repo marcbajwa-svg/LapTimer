@@ -13,12 +13,14 @@
       "**/*"
     ],
     "ios": {
+      "bundleIdentifier": "com.marcbajwa.laptimer",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "LapTimer uses your location to time laps and let you set a custom start point."
       },
       "supportsTablet": true
     },
     "android": {
+      "package": "com.marcbajwa.laptimer",
       "adaptiveIcon": {
         "backgroundColor": "#f4efe4"
       },
