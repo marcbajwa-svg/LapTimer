@@ -3,6 +3,42 @@ import { distanceMeters } from "../utils/location";
 
 export const presetTracks: TrackDefinition[] = [
   {
+    id: "anneau-du-rhin",
+    name: { en: "Anneau du Rhin", de: "Anneau du Rhin" },
+    markerLabel: {
+      en: "Main straight start / finish",
+      de: "Start / Ziel auf der Hauptgeraden",
+    },
+    direction: "clockwise",
+    minimumLapMs: 75_000,
+    latitude: 47.946,
+    longitude: 7.4297,
+    splitMarkers: [
+      {
+        id: "anneau-du-rhin-s1",
+        label: { en: "Sector 1", de: "Sektor 1" },
+        latitude: 47.9482,
+        longitude: 7.432,
+        radiusMeters: 40,
+      },
+      {
+        id: "anneau-du-rhin-s2",
+        label: { en: "Sector 2", de: "Sektor 2" },
+        latitude: 47.9447,
+        longitude: 7.4328,
+        radiusMeters: 40,
+      },
+      {
+        id: "anneau-du-rhin-s3",
+        label: { en: "Sector 3", de: "Sektor 3" },
+        latitude: 47.9448,
+        longitude: 7.4273,
+        radiusMeters: 40,
+      },
+    ],
+    source: "preset",
+  },
+  {
     id: "hockenheimring",
     name: { en: "Hockenheimring", de: "Hockenheimring" },
     markerLabel: {
@@ -34,6 +70,42 @@ export const presetTracks: TrackDefinition[] = [
         latitude: 49.3255,
         longitude: 8.5607,
         radiusMeters: 55,
+      },
+    ],
+    source: "preset",
+  },
+  {
+    id: "pannoniaring",
+    name: { en: "Pannonia-Ring", de: "Pannonia-Ring" },
+    markerLabel: {
+      en: "Main straight start / finish",
+      de: "Start / Ziel auf der Hauptgeraden",
+    },
+    direction: "clockwise",
+    minimumLapMs: 110_000,
+    latitude: 47.3042,
+    longitude: 17.0464,
+    splitMarkers: [
+      {
+        id: "pannoniaring-s1",
+        label: { en: "Sector 1", de: "Sektor 1" },
+        latitude: 47.3058,
+        longitude: 17.0511,
+        radiusMeters: 50,
+      },
+      {
+        id: "pannoniaring-s2",
+        label: { en: "Sector 2", de: "Sektor 2" },
+        latitude: 47.3025,
+        longitude: 17.0506,
+        radiusMeters: 50,
+      },
+      {
+        id: "pannoniaring-s3",
+        label: { en: "Sector 3", de: "Sektor 3" },
+        latitude: 47.302,
+        longitude: 17.0423,
+        radiusMeters: 50,
       },
     ],
     source: "preset",
