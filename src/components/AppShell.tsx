@@ -55,6 +55,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   content: {
+    flexGrow: 1,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
     paddingBottom: 120,

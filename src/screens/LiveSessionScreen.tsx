@@ -1,11 +1,7 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { PrimaryButton } from "../components/PrimaryButton";
-import { ScreenHeader } from "../components/ScreenHeader";
-import { SectionCard } from "../components/SectionCard";
-import { StatCard } from "../components/StatCard";
 import { copy } from "../i18n";
-import { Locale, SessionPreview, ScreenId, SessionStatus } from "../types";
+import { Locale, ScreenId, SessionPreview, SessionStatus } from "../types";
 import { theme } from "../theme";
 
 type LiveSessionScreenProps = {
@@ -32,89 +28,292 @@ export function LiveSessionScreen({
   const text = copy[locale];
   const canTriggerLap = sessionStatus === "running";
   const primaryLabel = sessionStatus === "paused" ? text.live.resumeSession : text.live.startSession;
+  const primaryAction = sessionStatus === "paused" ? onPauseSession : onStartSession;
   const primaryDisabled = sessionStatus === "running";
+  const statusLabel = getStatusLabel(text.live, sessionStatus);
 
   return (
-    <>
-      <ScreenHeader eyebrow={text.live.eyebrow} title={text.live.title} subtitle={text.live.subtitle} />
-
-      <View style={styles.grid}>
-        <StatCard label={text.common.currentLap} value={session.currentLap} tone="ink" />
-        <StatCard label={text.common.lastLap} value={session.lastLap} tone="clay" />
-        <StatCard label={text.common.bestLap} value={session.bestLap} tone="mint" />
-        <StatCard label={text.common.sessionTime} value={session.sessionTime} tone="sand" />
-      </View>
-
-      <SectionCard title={text.live.recordingStatusTitle} subtitle={text.live.recordingStatusSubtitle}>
-        <View style={styles.statusBlock}>
-          <View style={styles.statusChip}>
-            <Text style={styles.statusChipText}>{text.common.rec}</Text>
-          </View>
-          <Text style={styles.statusText}>{session.gpsStatus}</Text>
-          <Text style={styles.statusMeta}>
+    <View style={styles.screen}>
+      <View style={styles.topRail}>
+        <View style={styles.sessionBadge}>
+          <Text style={styles.sessionBadgeText}>{statusLabel}</Text>
+        </View>
+        <View style={styles.metaCard}>
+          <Text style={styles.metaLabel}>{text.common.track}</Text>
+          <Text style={styles.metaValue} numberOfLines={1}>
+            {session.trackName}
+          </Text>
+        </View>
+        <View style={styles.metaCard}>
+          <Text style={styles.metaLabel}>{text.common.gps}</Text>
+          <Text style={styles.metaValue} numberOfLines={1}>
+            {session.gpsStatus}
+          </Text>
+          <Text style={styles.metaHint}>
             {text.common.estimatedAccuracy}: {session.accuracy}
           </Text>
         </View>
-      </SectionCard>
+      </View>
 
-      <SectionCard title={text.live.driverActionsTitle} subtitle={text.live.driverActionsSubtitle}>
-        <View style={styles.actions}>
-          <PrimaryButton
-            label={primaryLabel}
-            disabled={primaryDisabled}
-            onPress={sessionStatus === "paused" ? onPauseSession : onStartSession}
-          />
-          <PrimaryButton
-            label={text.live.pauseSession}
-            tone="soft"
-            disabled={sessionStatus !== "running"}
-            onPress={onPauseSession}
-          />
-          <PrimaryButton
-            label={text.live.manualLapTrigger}
-            tone="accent"
-            disabled={!canTriggerLap}
-            onPress={onManualLap}
-          />
-          <PrimaryButton label={text.live.endSession} tone="soft" disabled={sessionStatus === "idle"} onPress={onEndSession} />
-          <PrimaryButton label={text.live.openSummary} tone="soft" onPress={() => onNavigate("summary")} />
+      <View style={styles.mainBoard}>
+        <View style={styles.heroPanel}>
+          <Text style={styles.heroLabel}>{text.common.currentLap}</Text>
+          <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55}>
+            {session.currentLap}
+          </Text>
+          <Text style={styles.heroHint}>
+            {text.common.direction}: {session.mode}
+          </Text>
         </View>
-      </SectionCard>
-    </>
+
+        <View style={styles.sideMetrics}>
+          <View style={[styles.metricCard, styles.metricWarm]}>
+            <Text style={styles.metricLabel}>{text.common.lastLap}</Text>
+            <Text style={styles.metricValue}>{session.lastLap}</Text>
+          </View>
+          <View style={[styles.metricCard, styles.metricCool]}>
+            <Text style={styles.metricLabel}>{text.common.bestLap}</Text>
+            <Text style={styles.metricValue}>{session.bestLap}</Text>
+          </View>
+          <View style={[styles.metricCard, styles.metricSand]}>
+            <Text style={styles.metricLabel}>{text.common.sessionTime}</Text>
+            <Text style={styles.metricValue}>{session.sessionTime}</Text>
+          </View>
+          <View style={[styles.metricCard, styles.metricSoft]}>
+            <Text style={styles.metricLabel}>{text.common.totalLaps}</Text>
+            <Text style={styles.metricValue}>{String(session.totalLaps)}</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.actionDeck}>
+        <Pressable
+          disabled={primaryDisabled}
+          onPress={primaryAction}
+          style={[styles.actionButton, styles.primaryAction, primaryDisabled && styles.disabled]}
+        >
+          <Text style={styles.primaryActionLabel}>{primaryLabel}</Text>
+        </Pressable>
+
+        <Pressable
+          disabled={!canTriggerLap}
+          onPress={onManualLap}
+          style={[styles.actionButton, styles.lapAction, !canTriggerLap && styles.disabled]}
+        >
+          <Text style={styles.lapActionLabel}>{text.live.manualLapTrigger}</Text>
+        </Pressable>
+
+        <Pressable
+          disabled={sessionStatus !== "running"}
+          onPress={onPauseSession}
+          style={[styles.actionButton, styles.secondaryAction, sessionStatus !== "running" && styles.disabled]}
+        >
+          <Text style={styles.secondaryActionLabel}>{text.live.pauseSession}</Text>
+        </Pressable>
+
+        <Pressable
+          disabled={sessionStatus === "idle"}
+          onPress={onEndSession}
+          style={[styles.actionButton, styles.secondaryAction, sessionStatus === "idle" && styles.disabled]}
+        >
+          <Text style={styles.secondaryActionLabel}>{text.live.endSession}</Text>
+        </Pressable>
+      </View>
+
+      <Pressable onPress={() => onNavigate("summary")} style={styles.summaryLink}>
+        <Text style={styles.summaryLinkText}>{text.live.openSummary}</Text>
+      </Pressable>
+    </View>
   );
 }
 
+function getStatusLabel(text: LiveSessionCopy, status: SessionStatus) {
+  if (status === "running") {
+    return text.statusRunning;
+  }
+
+  if (status === "paused") {
+    return text.statusPaused;
+  }
+
+  if (status === "finished") {
+    return text.statusFinished;
+  }
+
+  return text.startSession;
+}
+
+type LiveSessionCopy = (typeof copy)[Locale]["live"];
+
 const styles = StyleSheet.create({
-  grid: {
+  screen: {
+    flex: 1,
     gap: theme.spacing.md,
   },
-  statusBlock: {
-    gap: theme.spacing.sm,
+  topRail: {
+    flexDirection: "row",
+    gap: theme.spacing.md,
+    alignItems: "stretch",
   },
-  statusChip: {
-    alignSelf: "flex-start",
+  sessionBadge: {
+    minWidth: 170,
+    borderRadius: 24,
+    backgroundColor: theme.colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+  },
+  sessionBadgeText: {
+    color: theme.colors.textOnDark,
+    fontSize: 22,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  metaCard: {
+    flex: 1,
+    borderRadius: 24,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    justifyContent: "center",
+    gap: 4,
+  },
+  metaLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  metaValue: {
+    color: theme.colors.textStrong,
+    fontSize: 24,
+    fontWeight: "900",
+  },
+  metaHint: {
+    color: theme.colors.textMuted,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  mainBoard: {
+    flex: 1,
+    flexDirection: "row",
+    gap: theme.spacing.md,
+    minHeight: 0,
+  },
+  heroPanel: {
+    flex: 1.6,
+    borderRadius: 32,
+    backgroundColor: theme.colors.hero,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.lg,
+    justifyContent: "space-between",
+  },
+  heroLabel: {
+    color: theme.colors.heroAccent,
+    fontSize: 18,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+  },
+  heroValue: {
+    color: theme.colors.textStrong,
+    fontSize: 96,
+    lineHeight: 102,
+    fontWeight: "900",
+  },
+  heroHint: {
+    color: theme.colors.textMuted,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  sideMetrics: {
+    flex: 1,
+    gap: theme.spacing.md,
+  },
+  metricCard: {
+    flex: 1,
+    borderRadius: 24,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    justifyContent: "center",
+    gap: 8,
+  },
+  metricWarm: {
+    backgroundColor: theme.colors.clay,
+  },
+  metricCool: {
+    backgroundColor: theme.colors.mint,
+  },
+  metricSand: {
+    backgroundColor: theme.colors.sand,
+  },
+  metricSoft: {
+    backgroundColor: theme.colors.panelSoft,
+  },
+  metricLabel: {
+    color: theme.colors.textStrong,
+    fontSize: 14,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  metricValue: {
+    color: theme.colors.textStrong,
+    fontSize: 34,
+    fontWeight: "900",
+  },
+  actionDeck: {
+    flexDirection: "row",
+    gap: theme.spacing.md,
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 84,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.md,
+  },
+  primaryAction: {
+    backgroundColor: theme.colors.ink,
+  },
+  lapAction: {
     backgroundColor: theme.colors.accent,
-    borderRadius: 999,
+  },
+  secondaryAction: {
+    backgroundColor: theme.colors.panelSoft,
+  },
+  primaryActionLabel: {
+    color: theme.colors.textOnDark,
+    fontSize: 24,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  lapActionLabel: {
+    color: theme.colors.textOnDark,
+    fontSize: 24,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  secondaryActionLabel: {
+    color: theme.colors.textStrong,
+    fontSize: 22,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  disabled: {
+    opacity: 0.4,
+  },
+  summaryLink: {
+    alignSelf: "flex-end",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
   },
-  statusChipText: {
-    color: theme.colors.textOnDark,
-    fontSize: 13,
+  summaryLinkText: {
+    color: theme.colors.heroAccent,
+    fontSize: 15,
     fontWeight: "800",
-    letterSpacing: 1,
-  },
-  statusText: {
-    color: theme.colors.textStrong,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  statusMeta: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  actions: {
-    gap: theme.spacing.sm,
   },
 });
