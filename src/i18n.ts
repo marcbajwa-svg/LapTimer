@@ -26,6 +26,7 @@ type Dictionary = {
     confidence: Record<"high" | "medium" | "low", string>;
     lap: string;
     rec: string;
+    bestTag: string;
   };
   home: ScreenText & {
     sessionFlowTitle: string;
@@ -53,6 +54,13 @@ type Dictionary = {
     driverActionsSubtitle: string;
     manualLapTrigger: string;
     openSummary: string;
+    startSession: string;
+    pauseSession: string;
+    resumeSession: string;
+    endSession: string;
+    statusRunning: string;
+    statusPaused: string;
+    statusFinished: string;
   };
   summary: ScreenText & {
     reviewNotesTitle: string;
@@ -62,6 +70,11 @@ type Dictionary = {
     nextTitle: string;
     nextSubtitle: string;
     startNewSession: string;
+    emptyNotes: string[];
+    noteLapsRecorded: string;
+    noteBestLap: string;
+    noteFinished: string;
+    noteReady: string;
   };
 };
 
@@ -90,6 +103,7 @@ export const copy: Record<Locale, Dictionary> = {
       },
       lap: "Lap",
       rec: "REC",
+      bestTag: "Best",
     },
     home: {
       eyebrow: "LapTimer V1",
@@ -129,6 +143,13 @@ export const copy: Record<Locale, Dictionary> = {
       driverActionsSubtitle: "These actions become the first high-priority interaction targets.",
       manualLapTrigger: "Manual Lap Trigger",
       openSummary: "Open Summary",
+      startSession: "Start Session",
+      pauseSession: "Pause Session",
+      resumeSession: "Resume Session",
+      endSession: "End Session",
+      statusRunning: "Session recording live",
+      statusPaused: "Session paused",
+      statusFinished: "Session finished",
     },
     summary: {
       eyebrow: "Session Summary",
@@ -142,6 +163,15 @@ export const copy: Record<Locale, Dictionary> = {
       nextTitle: "Next Step",
       nextSubtitle: "From here the user should be able to save, export, or start another run.",
       startNewSession: "Start New Session",
+      emptyNotes: [
+        "No live laps have been recorded yet.",
+        "Start a session and trigger laps manually until GPS detection is connected.",
+        "This screen will become the trusted review step before saving.",
+      ],
+      noteLapsRecorded: "Laps recorded",
+      noteBestLap: "Best lap",
+      noteFinished: "The session is finished and ready for review.",
+      noteReady: "The session is still open, so more laps can be added.",
     },
   },
   de: {
@@ -160,7 +190,7 @@ export const copy: Record<Locale, Dictionary> = {
       direction: "Richtung",
       minimumLap: "Mindestzeit",
       clockwise: "Im Uhrzeigersinn",
-      estimatedAccuracy: "Geschätzte Genauigkeit",
+      estimatedAccuracy: "Geschaetzte Genauigkeit",
       confidence: {
         high: "hohe Sicherheit",
         medium: "mittlere Sicherheit",
@@ -168,18 +198,19 @@ export const copy: Record<Locale, Dictionary> = {
       },
       lap: "Runde",
       rec: "REC",
+      bestTag: "Bestzeit",
     },
     home: {
       eyebrow: "LapTimer V1",
       title: "Handy-zentriertes Timing mit einem klaren Weg in die Session.",
       subtitle:
-        "Dieser Startscreen gibt dem Fahrer einen klaren Ablauf: Setup prüfen, Timing starten und die Session ohne Menüsuche auswerten.",
+        "Dieser Startscreen gibt dem Fahrer einen klaren Ablauf: Setup pruefen, Timing starten und die Session ohne Menuesuche auswerten.",
       sessionFlowTitle: "Session-Ablauf",
-      sessionFlowSubtitle: "Daraus wird später das Onboarding für den ersten Start.",
+      sessionFlowSubtitle: "Daraus wird spaeter das Onboarding fuer den ersten Start.",
       quickActionsTitle: "Schnellaktionen",
-      quickActionsSubtitle: "In V1 soll der Nutzer jederzeit die nächste sichere Aktion verstehen.",
+      quickActionsSubtitle: "In V1 soll der Nutzer jederzeit die naechste sichere Aktion verstehen.",
       configureTrack: "Strecke einrichten",
-      openLiveTimer: "Live-Timer öffnen",
+      openLiveTimer: "Live-Timer oeffnen",
       reviewSummary: "Session auswerten",
     },
     setup: {
@@ -188,38 +219,54 @@ export const copy: Record<Locale, Dictionary> = {
       subtitle:
         "Hier werden GPS, Fahrtrichtung und Mindestvalidierung festgelegt, bevor die Live-Session startet.",
       startFinishTitle: "Start / Ziel",
-      startFinishSubtitle: "V1 nutzt zunächst ein einfaches geführtes Setup, bevor wir echte Karteninteraktion hinzufügen.",
+      startFinishSubtitle: "V1 nutzt zunaechst ein einfaches gefuehrtes Setup, bevor wir echte Karteninteraktion hinzufuegen.",
       checklistTitle: "Setup-Checkliste",
       checklistSubtitle: "Diese Checks reduzieren fehlerhafte Runden schon vor dem Losfahren.",
-      nextTitle: "Nächster Schritt",
-      nextSubtitle: "Später öffnet sich hier die Karte und erfasst die Koordinaten der Startlinie.",
+      nextTitle: "Naechster Schritt",
+      nextSubtitle: "Spaeter oeffnet sich hier die Karte und erfasst die Koordinaten der Startlinie.",
       previewLiveSession: "Live-Session ansehen",
-      backHome: "Zurück zum Start",
+      backHome: "Zurueck zum Start",
     },
     live: {
       eyebrow: "Live-Session",
       title: "Halte die Timing-Daten auch bei Geschwindigkeit gut lesbar.",
       subtitle:
-        "Der Live-Screen priorisiert große Zeitwerte, einen klar sichtbaren Aufnahmezustand, GPS-Vertrauen und eine sofort nutzbare manuelle Rundenaktion.",
+        "Der Live-Screen priorisiert grosse Zeitwerte, einen klar sichtbaren Aufnahmezustand, GPS-Vertrauen und eine sofort nutzbare manuelle Rundenaktion.",
       recordingStatusTitle: "Aufnahmestatus",
       recordingStatusSubtitle: "Das sind die Informationen, denen der Nutzer auf einen Blick vertrauen soll.",
       driverActionsTitle: "Fahreraktionen",
-      driverActionsSubtitle: "Diese Aktionen werden später die wichtigsten Interaktionsziele.",
-      manualLapTrigger: "Runde manuell auslösen",
-      openSummary: "Auswertung öffnen",
+      driverActionsSubtitle: "Diese Aktionen werden spaeter die wichtigsten Interaktionsziele.",
+      manualLapTrigger: "Runde manuell ausloesen",
+      openSummary: "Auswertung oeffnen",
+      startSession: "Session starten",
+      pauseSession: "Session pausieren",
+      resumeSession: "Session fortsetzen",
+      endSession: "Session beenden",
+      statusRunning: "Session-Aufnahme laeuft",
+      statusPaused: "Session pausiert",
+      statusFinished: "Session beendet",
     },
     summary: {
       eyebrow: "Session-Auswertung",
-      title: "Prüfe die Session, bevor sie als vertrauenswürdiges Ergebnis gespeichert wird.",
+      title: "Pruefe die Session, bevor sie als vertrauenswuerdiges Ergebnis gespeichert wird.",
       subtitle:
-        "Dieser Screen bündelt beste Runde, Rundenzahl, Vertrauenshinweise und die Rundenliste, damit auffällige Zeiten schnell sichtbar werden.",
-      reviewNotesTitle: "Prüfhinweise",
-      reviewNotesSubtitle: "Diese Hinweise modellieren später Validierung und Vertrauensstufen.",
+        "Dieser Screen buendelt beste Runde, Rundenzahl, Vertrauenshinweise und die Rundenliste, damit auffaellige Zeiten schnell sichtbar werden.",
+      reviewNotesTitle: "Pruefhinweise",
+      reviewNotesSubtitle: "Diese Hinweise modellieren spaeter Validierung und Vertrauensstufen.",
       lapListTitle: "Rundenliste",
-      lapListSubtitle: "Eine V1-Auswertung braucht eine schnell lesbare Übersicht aller Runden.",
-      nextTitle: "Nächster Schritt",
-      nextSubtitle: "Von hier aus soll der Nutzer speichern, exportieren oder eine neue Session starten können.",
+      lapListSubtitle: "Eine V1-Auswertung braucht eine schnell lesbare Uebersicht aller Runden.",
+      nextTitle: "Naechster Schritt",
+      nextSubtitle: "Von hier aus soll der Nutzer speichern, exportieren oder eine neue Session starten koennen.",
       startNewSession: "Neue Session starten",
+      emptyNotes: [
+        "Es wurden noch keine Live-Runden aufgezeichnet.",
+        "Starte eine Session und loese Runden manuell aus, bis die GPS-Erkennung angeschlossen ist.",
+        "Dieser Screen wird spaeter die verlaessliche Pruefung vor dem Speichern.",
+      ],
+      noteLapsRecorded: "Erfasste Runden",
+      noteBestLap: "Beste Runde",
+      noteFinished: "Die Session ist beendet und bereit fuer die Auswertung.",
+      noteReady: "Die Session ist noch offen, also koennen weitere Runden hinzukommen.",
     },
   },
 };

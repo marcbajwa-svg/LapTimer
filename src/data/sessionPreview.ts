@@ -57,7 +57,7 @@ const sessions: Record<Locale, SessionPreview> = {
     ],
   },
   de: {
-    trackName: "Rheinring Süd",
+    trackName: "Rheinring Sued",
     mode: "Trackday-Prototyp",
     currentLap: "01:14.82",
     lastLap: "01:13.94",
@@ -68,39 +68,39 @@ const sessions: Record<Locale, SessionPreview> = {
     startLineLabel: "Tor A / Gerade nach der Boxenausfahrt",
     totalLaps: 12,
     flow: [
-      "Wähle eine Strecke oder lege im Setup eine neue an.",
-      "Setze die Startlinie und bestätige die Fahrtrichtung.",
-      "Starte die Session und halte den Live-Timer während des Turns sichtbar.",
+      "Waehle eine Strecke oder lege im Setup eine neue an.",
+      "Setze die Startlinie und bestaetige die Fahrtrichtung.",
+      "Starte die Session und halte den Live-Timer waehrend des Turns sichtbar.",
       "Nutze zuerst die automatische Erkennung, mit manueller Runden-Taste als Backup.",
-      "Beende die Session und prüfe die Runden vor dem Speichern.",
+      "Beende die Session und pruefe die Runden vor dem Speichern.",
     ],
     setupChecklist: [
       "Markiere Start und Ziel auf der Karte oder nutze eine gespeicherte Strecke.",
-      "Lege die Überquerungsrichtung fest, damit Falschfahrten nicht zählen.",
-      "Zeige die GPS-Qualität an, bevor die Session live gehen darf.",
-      "Halte eine manuelle Rundeneingabe für schwache Signale bereit.",
+      "Lege die Ueberquerungsrichtung fest, damit Falschfahrten nicht zaehlen.",
+      "Zeige die GPS-Qualitaet an, bevor die Session live gehen darf.",
+      "Halte eine manuelle Rundeneingabe fuer schwache Signale bereit.",
     ],
     summaryNotes: [
       "Die beste Runde verbesserte sich nach der dritten fliegenden Runde um 0,53 s.",
-      "Zwei Runden wurden wegen schwächerer GPS-Qualität mit mittlerer Sicherheit markiert.",
+      "Zwei Runden wurden wegen schwaecherer GPS-Qualitaet mit mittlerer Sicherheit markiert.",
       "Der Timing-Ablauf soll auch mit Handschuhen und auf einen Blick lesbar bleiben.",
     ],
     lapDetectionRules: [
       {
-        title: "Richtungsprüfung",
-        body: "Eine Runde zählt nur, wenn der Bewegungsvektor die Linie in der richtigen Richtung überquert.",
+        title: "Richtungspruefung",
+        body: "Eine Runde zaehlt nur, wenn der Bewegungsvektor die Linie in der richtigen Richtung ueberquert.",
       },
       {
         title: "Mindestzeit pro Runde",
-        body: "Ein Cooldown-Fenster verhindert, dass eine einzelne Überfahrt doppelt gezählt wird.",
+        body: "Ein Cooldown-Fenster verhindert, dass eine einzelne Ueberfahrt doppelt gezaehlt wird.",
       },
       {
-        title: "GPS-Glättung",
-        body: "Aktuelle Samples sollten gefiltert werden, bevor ein Crossing-Event durch Handy-GPS bestätigt wird.",
+        title: "GPS-Glaettung",
+        body: "Aktuelle Samples sollten gefiltert werden, bevor ein Crossing-Event durch Handy-GPS bestaetigt wird.",
       },
       {
         title: "Manuelles Backup",
-        body: "Wenn die Signalqualität sinkt, braucht der Fahrer weiterhin eine sichere manuelle Rundenoption.",
+        body: "Wenn die Signalqualitaet sinkt, braucht der Fahrer weiterhin eine sichere manuelle Rundenoption.",
       },
     ],
     laps: [

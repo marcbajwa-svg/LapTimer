@@ -6,16 +6,24 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
 import { StatCard } from "../components/StatCard";
 import { copy } from "../i18n";
-import { Locale, SessionPreview, ScreenId } from "../types";
+import { Locale, SessionPreview, ScreenId, SessionStatus } from "../types";
 import { theme } from "../theme";
 
 type SessionSummaryScreenProps = {
   locale: Locale;
   session: SessionPreview;
+  sessionStatus: SessionStatus;
   onNavigate: (screen: ScreenId) => void;
+  onStartSession: () => void;
 };
 
-export function SessionSummaryScreen({ locale, session, onNavigate }: SessionSummaryScreenProps) {
+export function SessionSummaryScreen({
+  locale,
+  session,
+  sessionStatus,
+  onNavigate,
+  onStartSession,
+}: SessionSummaryScreenProps) {
   const text = copy[locale];
 
   return (
@@ -43,7 +51,10 @@ export function SessionSummaryScreen({ locale, session, onNavigate }: SessionSum
       </SectionCard>
 
       <SectionCard title={text.summary.nextTitle} subtitle={text.summary.nextSubtitle}>
-        <PrimaryButton label={text.summary.startNewSession} onPress={() => onNavigate("live")} />
+        <PrimaryButton
+          label={sessionStatus === "running" ? text.home.openLiveTimer : text.summary.startNewSession}
+          onPress={sessionStatus === "running" ? () => onNavigate("live") : onStartSession}
+        />
       </SectionCard>
     </>
   );

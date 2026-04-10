@@ -5,12 +5,17 @@ import { theme } from "../theme";
 type PrimaryButtonProps = {
   label: string;
   tone?: "ink" | "accent" | "soft";
+  disabled?: boolean;
   onPress: () => void;
 };
 
-export function PrimaryButton({ label, tone = "ink", onPress }: PrimaryButtonProps) {
+export function PrimaryButton({ label, tone = "ink", disabled = false, onPress }: PrimaryButtonProps) {
   return (
-    <Pressable onPress={onPress} style={[styles.button, toneStyles[tone].button]}>
+    <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      style={[styles.button, toneStyles[tone].button, disabled && styles.disabled]}
+    >
       <Text style={[styles.label, toneStyles[tone].label]}>{label}</Text>
     </Pressable>
   );
@@ -54,5 +59,8 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: "800",
+  },
+  disabled: {
+    opacity: 0.45,
   },
 });

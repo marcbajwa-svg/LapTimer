@@ -5,17 +5,34 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
 import { StatCard } from "../components/StatCard";
 import { copy } from "../i18n";
-import { Locale, SessionPreview, ScreenId } from "../types";
+import { Locale, SessionPreview, ScreenId, SessionStatus } from "../types";
 import { theme } from "../theme";
 
 type LiveSessionScreenProps = {
   locale: Locale;
   session: SessionPreview;
+  sessionStatus: SessionStatus;
   onNavigate: (screen: ScreenId) => void;
+  onStartSession: () => void;
+  onPauseSession: () => void;
+  onEndSession: () => void;
+  onManualLap: () => void;
 };
 
-export function LiveSessionScreen({ locale, session, onNavigate }: LiveSessionScreenProps) {
+export function LiveSessionScreen({
+  locale,
+  session,
+  sessionStatus,
+  onNavigate,
+  onStartSession,
+  onPauseSession,
+  onEndSession,
+  onManualLap,
+}: LiveSessionScreenProps) {
   const text = copy[locale];
+  const canTriggerLap = sessionStatus === "running";
+  const primaryLabel = sessionStatus === "paused" ? text.live.resumeSession : text.live.startSession;
+  const primaryDisabled = sessionStatus === "running";
 
   return (
     <>
@@ -42,7 +59,24 @@ export function LiveSessionScreen({ locale, session, onNavigate }: LiveSessionSc
 
       <SectionCard title={text.live.driverActionsTitle} subtitle={text.live.driverActionsSubtitle}>
         <View style={styles.actions}>
-          <PrimaryButton label={text.live.manualLapTrigger} tone="accent" onPress={() => onNavigate("summary")} />
+          <PrimaryButton
+            label={primaryLabel}
+            disabled={primaryDisabled}
+            onPress={sessionStatus === "paused" ? onPauseSession : onStartSession}
+          />
+          <PrimaryButton
+            label={text.live.pauseSession}
+            tone="soft"
+            disabled={sessionStatus !== "running"}
+            onPress={onPauseSession}
+          />
+          <PrimaryButton
+            label={text.live.manualLapTrigger}
+            tone="accent"
+            disabled={!canTriggerLap}
+            onPress={onManualLap}
+          />
+          <PrimaryButton label={text.live.endSession} tone="soft" disabled={sessionStatus === "idle"} onPress={onEndSession} />
           <PrimaryButton label={text.live.openSummary} tone="soft" onPress={() => onNavigate("summary")} />
         </View>
       </SectionCard>

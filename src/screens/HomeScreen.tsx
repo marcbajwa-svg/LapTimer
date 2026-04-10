@@ -12,9 +12,10 @@ type HomeScreenProps = {
   locale: Locale;
   session: SessionPreview;
   onNavigate: (screen: ScreenId) => void;
+  onStartSession: () => void;
 };
 
-export function HomeScreen({ locale, session, onNavigate }: HomeScreenProps) {
+export function HomeScreen({ locale, session, onNavigate, onStartSession }: HomeScreenProps) {
   const text = copy[locale];
 
   return (
@@ -40,8 +41,9 @@ export function HomeScreen({ locale, session, onNavigate }: HomeScreenProps) {
 
       <SectionCard title={text.home.quickActionsTitle} subtitle={text.home.quickActionsSubtitle}>
         <View style={styles.actions}>
+          <PrimaryButton label={text.live.startSession} tone="accent" onPress={onStartSession} />
           <PrimaryButton label={text.home.configureTrack} onPress={() => onNavigate("setup")} />
-          <PrimaryButton label={text.home.openLiveTimer} tone="accent" onPress={() => onNavigate("live")} />
+          <PrimaryButton label={text.home.openLiveTimer} tone="soft" onPress={() => onNavigate("live")} />
           <PrimaryButton label={text.home.reviewSummary} tone="soft" onPress={() => onNavigate("summary")} />
         </View>
       </SectionCard>

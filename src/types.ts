@@ -1,5 +1,6 @@
 export type ScreenId = "home" | "setup" | "live" | "summary";
 export type Locale = "en" | "de";
+export type SessionStatus = "idle" | "running" | "paused" | "finished";
 
 export type Lap = {
   number: number;
@@ -26,5 +27,15 @@ export type SessionPreview = {
     title: string;
     body: string;
   }[];
+  laps: Lap[];
+};
+
+export type LiveSessionState = {
+  status: SessionStatus;
+  sessionTimeMs: number;
+  currentLapTimeMs: number;
+  bestLapTimeMs: number | null;
+  lastLapTimeMs: number | null;
+  lapCount: number;
   laps: Lap[];
 };
