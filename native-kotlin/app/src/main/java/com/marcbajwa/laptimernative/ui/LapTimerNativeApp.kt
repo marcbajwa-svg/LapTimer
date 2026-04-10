@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material.icons.outlined.ScreenRotation
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.Button
@@ -97,6 +98,7 @@ private data class NativeCopy(
     val selectedTrackTitle: String,
     val selectedTrackSubtitle: String,
     val languageButton: String,
+    val closeAppButton: String,
     val orientationAuto: String,
     val orientationLandscape: String,
     val orientationPortrait: String,
@@ -139,6 +141,7 @@ private val germanCopy = NativeCopy(
     selectedTrackTitle = "Aktive Strecke",
     selectedTrackSubtitle = "Aktuelles Ziel des nativen Umbaus",
     languageButton = "English",
+    closeAppButton = "Beenden",
     orientationAuto = "Auto",
     orientationLandscape = "Quer",
     orientationPortrait = "Hoch",
@@ -181,6 +184,7 @@ private val englishCopy = NativeCopy(
     selectedTrackTitle = "Selected track",
     selectedTrackSubtitle = "Current native migration target",
     languageButton = "Deutsch",
+    closeAppButton = "Close",
     orientationAuto = "Auto",
     orientationLandscape = "Wide",
     orientationPortrait = "Tall",
@@ -189,6 +193,7 @@ private val englishCopy = NativeCopy(
 @Composable
 fun LapTimerNativeApp() {
     val context = LocalContext.current
+    val activity = context.findActivity()
     var activeScreen by remember { mutableStateOf(Screen.Home) }
     var selectedTrack by remember { mutableStateOf(TrackRepository.nearbySuggestion) }
     var language by remember { mutableStateOf(AppLanguage.DE) }
@@ -210,6 +215,7 @@ fun LapTimerNativeApp() {
             TopControlsBar(
                 copy = copy,
                 orientationMode = orientationMode,
+                onCloseApp = { activity?.finishAffinity() },
                 onToggleLanguage = {
                     language = if (language == AppLanguage.DE) AppLanguage.EN else AppLanguage.DE
                 },
@@ -261,6 +267,7 @@ fun LapTimerNativeApp() {
 private fun TopControlsBar(
     copy: NativeCopy,
     orientationMode: OrientationMode,
+    onCloseApp: () -> Unit,
     onToggleLanguage: () -> Unit,
     onCycleOrientation: () -> Unit,
 ) {
@@ -270,6 +277,17 @@ private fun TopControlsBar(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
     ) {
+        Button(
+            onClick = onCloseApp,
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1E2D38),
+                contentColor = Color.White,
+            ),
+        ) {
+            Icon(Icons.Outlined.PowerSettingsNew, contentDescription = null)
+            Text(text = " ${copy.closeAppButton}")
+        }
         SecondaryAction(
             label = copy.languageButton,
             onClick = onToggleLanguage,
