@@ -225,7 +225,7 @@ function DrivingModeScreen({
       <View style={[styles.driveStatsRow, compactHeight && styles.driveStatsRowCompact]}>
         <MetricCard label={text.common.lastLap} value={session.lastLap} tone="warm" valueSize={compactHeight ? 20 : 24} compact={compactHeight} />
         <MetricCard label={text.common.bestLap} value={session.bestLap} tone="cool" valueSize={compactHeight ? 20 : 24} compact={compactHeight} />
-        <MetricCard label={text.common.sessionTime} value={session.sessionTime} tone="soft" valueSize={compactHeight ? 20 : 24} compact={compactHeight} />
+        <MetricCard label={text.common.totalLaps} value={String(session.totalLaps)} tone="soft" valueSize={compactHeight ? 20 : 24} compact={compactHeight} />
       </View>
 
       <View style={[styles.driveActions, compactHeight && styles.driveActionsCompact]}>

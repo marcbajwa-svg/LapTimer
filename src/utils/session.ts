@@ -1,7 +1,7 @@
 import { CurrentLocation, Lap, LiveSessionState, Locale, SessionPreview, TrackDefinition } from "../types";
 import { copy } from "../i18n";
 import { formatDuration, formatSessionClock, formatSignedDuration } from "./time";
-import { isWithinSplitRadius } from "./location";
+import { distanceMeters, isWithinSplitRadius } from "./location";
 
 export function createInitialLiveState(seed: SessionPreview): LiveSessionState {
   return {
@@ -171,4 +171,62 @@ export function finishLap(
     lapCount: state.lapCount + 1,
     laps: [nextLap, ...state.laps],
   };
+}
+
+export function syncProgressDelta(
+  state: LiveSessionState,
+  track: TrackDefinition,
+  location: CurrentLocation,
+): LiveSessionState {
+  if (state.status !== "running") {
+    return state;
+  }
+
+  if (state.bestLapTimeMs === null) {
+    return maybeRegisterSplit(state, track, location);
+  }
+
+  const interpolation = buildInterpolatedDelta(state, track, location);
+  const withInterpolatedDelta =
+    interpolation === null
+      ? state
+      : {
+          ...state,
+          currentDeltaMs: interpolation,
+        };
+
+  return maybeRegisterSplit(withInterpolatedDelta, track, location);
+}
+
+function buildInterpolatedDelta(
+  state: LiveSessionState,
+  track: TrackDefinition,
+  location: CurrentLocation,
+): number | null {
+  const totalSplits = track.splitMarkers.length;
+  const nextSplitIndex = state.nextSplitIndex;
+
+  const segmentStartPoint =
+    nextSplitIndex === 0 ? { latitude: track.latitude, longitude: track.longitude } : track.splitMarkers[nextSplitIndex - 1];
+  const segmentStartReferenceMs = nextSplitIndex === 0 ? 0 : state.bestLapSplitTimesMs?.[nextSplitIndex - 1] ?? null;
+
+  const isFinishSegment = nextSplitIndex >= totalSplits;
+  const segmentEndPoint = isFinishSegment ? { latitude: track.latitude, longitude: track.longitude } : track.splitMarkers[nextSplitIndex];
+  const segmentEndReferenceMs = isFinishSegment ? state.bestLapTimeMs : state.bestLapSplitTimesMs?.[nextSplitIndex] ?? null;
+
+  if (segmentStartReferenceMs === null || segmentEndReferenceMs === null) {
+    return null;
+  }
+
+  const segmentDistance = distanceMeters(segmentStartPoint, segmentEndPoint);
+  if (segmentDistance < 1) {
+    return state.currentLapTimeMs - segmentEndReferenceMs;
+  }
+
+  const distanceFromSegmentStart = distanceMeters(segmentStartPoint, location);
+  const rawProgress = distanceFromSegmentStart / segmentDistance;
+  const progress = Math.min(1, Math.max(0, rawProgress));
+  const referenceMs = segmentStartReferenceMs + (segmentEndReferenceMs - segmentStartReferenceMs) * progress;
+
+  return state.currentLapTimeMs - referenceMs;
 }

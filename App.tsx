@@ -21,7 +21,7 @@ import {
   TrackDefinition,
 } from "./src/types";
 import { theme } from "./src/theme";
-import { buildSessionPreview, createInitialLiveState, finishLap, maybeRegisterSplit } from "./src/utils/session";
+import { buildSessionPreview, createInitialLiveState, finishLap, syncProgressDelta } from "./src/utils/session";
 
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<ScreenId>("home");
@@ -145,7 +145,7 @@ export default function App() {
       return;
     }
 
-    setLiveState((current) => maybeRegisterSplit(current, selectedTrack, currentLocation));
+    setLiveState((current) => syncProgressDelta(current, selectedTrack, currentLocation));
   }, [currentLocation, liveState.status, selectedTrack]);
 
   const requestLocationPermission = async () => {

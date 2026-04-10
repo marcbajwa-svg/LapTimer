@@ -2,7 +2,9 @@ import { CurrentLocation, SplitMarker } from "../types";
 
 const EARTH_RADIUS_METERS = 6_371_000;
 
-export function distanceMeters(a: CurrentLocation, b: Pick<SplitMarker, "latitude" | "longitude">): number {
+type Coordinate = Pick<CurrentLocation, "latitude" | "longitude"> | Pick<SplitMarker, "latitude" | "longitude">;
+
+export function distanceMeters(a: Coordinate, b: Coordinate): number {
   const lat1 = toRadians(a.latitude);
   const lat2 = toRadians(b.latitude);
   const deltaLat = toRadians(b.latitude - a.latitude);
