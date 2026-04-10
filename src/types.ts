@@ -3,6 +3,14 @@ export type Locale = "en" | "de";
 export type SessionStatus = "idle" | "running" | "paused" | "finished";
 export type PermissionState = "unknown" | "granted" | "denied";
 
+export type SplitMarker = {
+  id: string;
+  label: Record<Locale, string>;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+};
+
 export type Lap = {
   number: number;
   time: string;
@@ -36,8 +44,12 @@ export type LiveSessionState = {
   status: SessionStatus;
   sessionTimeMs: number;
   currentLapTimeMs: number;
+  currentDeltaMs: number | null;
   bestLapTimeMs: number | null;
   lastLapTimeMs: number | null;
+  bestLapSplitTimesMs: number[] | null;
+  currentLapSplitTimesMs: number[];
+  nextSplitIndex: number;
   lapCount: number;
   laps: Lap[];
 };
@@ -50,6 +62,7 @@ export type TrackDefinition = {
   minimumLapMs: number;
   latitude: number;
   longitude: number;
+  splitMarkers: SplitMarker[];
   source: "preset" | "custom";
 };
 

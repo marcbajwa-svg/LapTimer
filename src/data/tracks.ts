@@ -12,6 +12,29 @@ export const presetTracks: TrackDefinition[] = [
     minimumLapMs: 25_000,
     latitude: 50.1109,
     longitude: 8.6821,
+    splitMarkers: [
+      {
+        id: "rheinring-south-s1",
+        label: { en: "Sector 1", de: "Sektor 1" },
+        latitude: 50.1114,
+        longitude: 8.683,
+        radiusMeters: 35,
+      },
+      {
+        id: "rheinring-south-s2",
+        label: { en: "Sector 2", de: "Sektor 2" },
+        latitude: 50.1102,
+        longitude: 8.6835,
+        radiusMeters: 35,
+      },
+      {
+        id: "rheinring-south-s3",
+        label: { en: "Sector 3", de: "Sektor 3" },
+        latitude: 50.1101,
+        longitude: 8.6814,
+        radiusMeters: 35,
+      },
+    ],
     source: "preset",
   },
   {
@@ -25,6 +48,29 @@ export const presetTracks: TrackDefinition[] = [
     minimumLapMs: 35_000,
     latitude: 48.1351,
     longitude: 11.582,
+    splitMarkers: [
+      {
+        id: "forest-loop-s1",
+        label: { en: "Sector 1", de: "Sektor 1" },
+        latitude: 48.1358,
+        longitude: 11.5824,
+        radiusMeters: 40,
+      },
+      {
+        id: "forest-loop-s2",
+        label: { en: "Sector 2", de: "Sektor 2" },
+        latitude: 48.1348,
+        longitude: 11.5832,
+        radiusMeters: 40,
+      },
+      {
+        id: "forest-loop-s3",
+        label: { en: "Sector 3", de: "Sektor 3" },
+        latitude: 48.1343,
+        longitude: 11.5816,
+        radiusMeters: 40,
+      },
+    ],
     source: "preset",
   },
   {
@@ -38,6 +84,29 @@ export const presetTracks: TrackDefinition[] = [
     minimumLapMs: 18_000,
     latitude: 53.5511,
     longitude: 9.9937,
+    splitMarkers: [
+      {
+        id: "harbor-kart-s1",
+        label: { en: "Sector 1", de: "Sektor 1" },
+        latitude: 53.5514,
+        longitude: 9.9943,
+        radiusMeters: 25,
+      },
+      {
+        id: "harbor-kart-s2",
+        label: { en: "Sector 2", de: "Sektor 2" },
+        latitude: 53.5508,
+        longitude: 9.9944,
+        radiusMeters: 25,
+      },
+      {
+        id: "harbor-kart-s3",
+        label: { en: "Sector 3", de: "Sektor 3" },
+        latitude: 53.5507,
+        longitude: 9.9931,
+        radiusMeters: 25,
+      },
+    ],
     source: "preset",
   },
 ];
@@ -57,6 +126,7 @@ export function buildCustomTrack(locale: Locale, latitude: number, longitude: nu
     minimumLapMs: 25_000,
     latitude,
     longitude,
+    splitMarkers: [],
     source: "custom",
   };
 }

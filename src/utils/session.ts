@@ -1,14 +1,19 @@
-import { Lap, LiveSessionState, Locale, SessionPreview } from "../types";
+import { CurrentLocation, Lap, LiveSessionState, Locale, SessionPreview, TrackDefinition } from "../types";
 import { copy } from "../i18n";
 import { formatDuration, formatSessionClock, formatSignedDuration } from "./time";
+import { isWithinSplitRadius } from "./location";
 
 export function createInitialLiveState(seed: SessionPreview): LiveSessionState {
   return {
     status: "idle",
     sessionTimeMs: 0,
     currentLapTimeMs: 0,
+    currentDeltaMs: null,
     bestLapTimeMs: parseLap(seed.bestLap),
     lastLapTimeMs: null,
+    bestLapSplitTimesMs: null,
+    currentLapSplitTimesMs: [],
+    nextSplitIndex: 0,
     lapCount: 0,
     laps: [],
   };
@@ -58,7 +63,7 @@ export function buildSessionPreview(
   return {
     ...seed,
     currentLap: formatDuration(state.currentLapTimeMs || 0),
-    currentDelta: buildCurrentDelta(state),
+    currentDelta: buildCurrentDelta(state, seed.currentDelta),
     lastLap: state.lastLapTimeMs ? formatDuration(state.lastLapTimeMs) : seed.lastLap,
     bestLap: bestLapTimeMs ? formatDuration(bestLapTimeMs) : seed.bestLap,
     sessionTime: formatSessionClock(state.sessionTimeMs),
@@ -69,12 +74,16 @@ export function buildSessionPreview(
   };
 }
 
-function buildCurrentDelta(state: LiveSessionState): string {
-  if (state.bestLapTimeMs === null) {
-    return "--";
+function buildCurrentDelta(state: LiveSessionState, fallback: string): string {
+  if (state.currentDeltaMs !== null) {
+    return formatSignedDuration(state.currentDeltaMs);
   }
 
-  return formatSignedDuration(state.currentLapTimeMs - state.bestLapTimeMs);
+  if (state.bestLapTimeMs === null) {
+    return fallback;
+  }
+
+  return "--";
 }
 
 function statusCopy(status: LiveSessionState["status"], locale: Locale, idleFallback: string): string {
@@ -105,4 +114,61 @@ function parseLap(value: string): number | null {
 export function formatTrackDirection(locale: Locale, direction: "clockwise" | "counterclockwise"): string {
   const text = copy[locale];
   return direction === "clockwise" ? text.common.clockwiseShort : text.common.counterclockwiseShort;
+}
+
+export function maybeRegisterSplit(
+  state: LiveSessionState,
+  track: TrackDefinition,
+  location: CurrentLocation,
+): LiveSessionState {
+  if (state.status !== "running") {
+    return state;
+  }
+
+  const splitMarker = track.splitMarkers[state.nextSplitIndex];
+  if (!splitMarker) {
+    return state;
+  }
+
+  if (!isWithinSplitRadius(location, splitMarker)) {
+    return state;
+  }
+
+  const nextSplitTimes = [...state.currentLapSplitTimesMs, state.currentLapTimeMs];
+  const referenceSplitTime = state.bestLapSplitTimesMs?.[state.nextSplitIndex] ?? null;
+
+  return {
+    ...state,
+    currentLapSplitTimesMs: nextSplitTimes,
+    currentDeltaMs: referenceSplitTime !== null ? state.currentLapTimeMs - referenceSplitTime : state.currentDeltaMs,
+    nextSplitIndex: Math.min(state.nextSplitIndex + 1, track.splitMarkers.length),
+  };
+}
+
+export function finishLap(
+  state: LiveSessionState,
+  locale: Locale,
+): LiveSessionState {
+  const nextLap = createLapFromCurrent(state, locale);
+  if (!nextLap) {
+    return state;
+  }
+
+  const isBestLap = state.bestLapTimeMs === null || state.currentLapTimeMs < state.bestLapTimeMs;
+  const nextBestTime = isBestLap ? state.currentLapTimeMs : state.bestLapTimeMs;
+  const nextBestSplits =
+    isBestLap && state.currentLapSplitTimesMs.length > 0 ? [...state.currentLapSplitTimesMs] : state.bestLapSplitTimesMs;
+
+  return {
+    ...state,
+    bestLapTimeMs: nextBestTime,
+    bestLapSplitTimesMs: nextBestSplits,
+    lastLapTimeMs: state.currentLapTimeMs,
+    currentLapTimeMs: 0,
+    currentDeltaMs: null,
+    currentLapSplitTimesMs: [],
+    nextSplitIndex: 0,
+    lapCount: state.lapCount + 1,
+    laps: [nextLap, ...state.laps],
+  };
 }

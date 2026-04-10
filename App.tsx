@@ -1,7 +1,8 @@
 import { StatusBar } from "expo-status-bar";
+import * as Location from "expo-location";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { SafeAreaView, StyleSheet } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AppShell } from "./src/components/AppShell";
 import { presetTracks, buildCustomTrack } from "./src/data/tracks";
@@ -20,7 +21,7 @@ import {
   TrackDefinition,
 } from "./src/types";
 import { theme } from "./src/theme";
-import { buildSessionPreview, createInitialLiveState, createLapFromCurrent, formatTrackDirection } from "./src/utils/session";
+import { buildSessionPreview, createInitialLiveState, finishLap, maybeRegisterSplit } from "./src/utils/session";
 
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<ScreenId>("home");
@@ -29,6 +30,7 @@ export default function App() {
   const [permissionState, setPermissionState] = useState<PermissionState>("unknown");
   const [currentLocation, setCurrentLocation] = useState<CurrentLocation | null>(null);
   const [liveState, setLiveState] = useState<LiveSessionState>(() => createInitialLiveState(getPreviewSession("de")));
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
 
   const text = copy[locale];
   const seedSession = getPreviewSession(locale);
@@ -36,6 +38,25 @@ export default function App() {
   useEffect(() => {
     setPermissionState("unknown");
     setCurrentLocation(null);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const syncPermission = async () => {
+      const permission = await Location.getForegroundPermissionsAsync();
+      if (!active) {
+        return;
+      }
+
+      setPermissionState(permission.granted ? "granted" : "unknown");
+    };
+
+    void syncPermission();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -65,13 +86,76 @@ export default function App() {
     return () => clearInterval(interval);
   }, [liveState.status]);
 
+  useEffect(() => {
+    if (permissionState !== "granted") {
+      locationSubscriptionRef.current?.remove();
+      locationSubscriptionRef.current = null;
+      return;
+    }
+
+    let active = true;
+
+    const startWatching = async () => {
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.BestForNavigation,
+      });
+
+      if (active) {
+        setCurrentLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        });
+      }
+
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          distanceInterval: 5,
+          timeInterval: 500,
+        },
+        (update) => {
+          setCurrentLocation({
+            latitude: update.coords.latitude,
+            longitude: update.coords.longitude,
+            accuracy: update.coords.accuracy,
+          });
+        },
+      );
+
+      if (!active) {
+        subscription.remove();
+        return;
+      }
+
+      locationSubscriptionRef.current = subscription;
+    };
+
+    void startWatching();
+
+    return () => {
+      active = false;
+      locationSubscriptionRef.current?.remove();
+      locationSubscriptionRef.current = null;
+    };
+  }, [permissionState]);
+
+  useEffect(() => {
+    if (!currentLocation || liveState.status !== "running") {
+      return;
+    }
+
+    setLiveState((current) => maybeRegisterSplit(current, selectedTrack, currentLocation));
+  }, [currentLocation, liveState.status, selectedTrack]);
+
   const requestLocationPermission = async () => {
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (!permission.granted) {
+      setPermissionState("denied");
+      return;
+    }
+
     setPermissionState("granted");
-    setCurrentLocation({
-      latitude: selectedTrack.latitude,
-      longitude: selectedTrack.longitude,
-      accuracy: 5,
-    });
   };
 
   const useCurrentPositionAsTrack = () => {
@@ -115,30 +199,7 @@ export default function App() {
   };
 
   const triggerManualLap = () => {
-    setLiveState((current) => {
-      if (current.status !== "running") {
-        return current;
-      }
-
-      const nextLap = createLapFromCurrent(current, locale);
-      if (!nextLap) {
-        return current;
-      }
-
-      const nextBest =
-        current.bestLapTimeMs === null || current.currentLapTimeMs < current.bestLapTimeMs
-          ? current.currentLapTimeMs
-          : current.bestLapTimeMs;
-
-      return {
-        ...current,
-        bestLapTimeMs: nextBest,
-        lastLapTimeMs: current.currentLapTimeMs,
-        currentLapTimeMs: 0,
-        lapCount: current.lapCount + 1,
-        laps: [nextLap, ...current.laps],
-      };
-    });
+    setLiveState((current) => (current.status === "running" ? finishLap(current, locale) : current));
   };
 
   const locationAccuracy = currentLocation?.accuracy ? `${Math.round(currentLocation.accuracy)} m` : seedSession.accuracy;
