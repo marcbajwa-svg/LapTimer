@@ -1,5 +1,6 @@
 package com.marcbajwa.laptimernative.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -280,9 +282,9 @@ private fun LiveScreen(snapshot: LiveSessionSnapshot) {
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            AccentAction(modifier = Modifier.weight(1f), label = "Lap markieren")
-            SecondaryAction(modifier = Modifier.weight(1f), label = "Pause") {}
-            SecondaryAction(modifier = Modifier.weight(1f), label = "Ende") {}
+            AccentAction(label = "Lap markieren", modifier = Modifier.weight(1f))
+            SecondaryAction(label = "Pause", onClick = {}, modifier = Modifier.weight(1f))
+            SecondaryAction(label = "Ende", onClick = {}, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -360,8 +362,9 @@ private fun SelectableTrackCard(
     val border = if (selected) Color(0xFFC65D3B) else Color.Transparent
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onSelect,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSelect),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = background),
         border = androidx.compose.foundation.BorderStroke(2.dp, border),
