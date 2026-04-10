@@ -52,6 +52,18 @@ Suggested next steps on a dev machine:
 2. Run `npm install`.
 3. Run `npx expo start`.
 
+## Android Testing Note
+
+If Expo Go on Android shows a red runtime screen before the app code loads, use a development build instead of Expo Go.
+
+Recommended flow:
+
+1. Install dependencies with `npm install`.
+2. Build a development client with EAS.
+3. Start the Metro server with `npx expo start --dev-client`.
+
+This is often more stable than Expo Go for projects that hit runtime issues inside the Expo Go environment.
+
 ## Notes
 
 - GPS on phones is good enough for a prototype, but not as precise as dedicated motorsport hardware.
