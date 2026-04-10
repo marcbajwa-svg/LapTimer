@@ -5,13 +5,14 @@ import { theme } from "../theme";
 type InfoRowProps = {
   label: string;
   value: string;
+  multiline?: boolean;
 };
 
-export function InfoRow({ label, value }: InfoRowProps) {
+export function InfoRow({ label, value, multiline = false }: InfoRowProps) {
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      <Text style={[styles.value, multiline && styles.valueMultiline]}>{value}</Text>
     </View>
   );
 }
@@ -35,5 +36,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: "700",
     textAlign: "right",
+  },
+  valueMultiline: {
+    maxWidth: "55%",
   },
 });

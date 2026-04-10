@@ -27,6 +27,8 @@ type Dictionary = {
     lap: string;
     rec: string;
     bestTag: string;
+    clockwiseShort: string;
+    counterclockwiseShort: string;
   };
   home: ScreenText & {
     sessionFlowTitle: string;
@@ -46,6 +48,17 @@ type Dictionary = {
     nextSubtitle: string;
     previewLiveSession: string;
     backHome: string;
+    trackLibraryTitle: string;
+    trackLibrarySubtitle: string;
+    selectedTrackTitle: string;
+    selectedTrackSubtitle: string;
+    useCurrentPosition: string;
+    locationPermissionTitle: string;
+    locationPermissionSubtitle: string;
+    allowLocation: string;
+    locationGranted: string;
+    locationDenied: string;
+    currentPositionLabel: string;
   };
   live: ScreenText & {
     recordingStatusTitle: string;
@@ -104,6 +117,8 @@ export const copy: Record<Locale, Dictionary> = {
       lap: "Lap",
       rec: "REC",
       bestTag: "Best",
+      clockwiseShort: "Clockwise",
+      counterclockwiseShort: "Counterclockwise",
     },
     home: {
       eyebrow: "LapTimer V1",
@@ -131,6 +146,17 @@ export const copy: Record<Locale, Dictionary> = {
       nextSubtitle: "The real implementation here will open the map and capture start-line coordinates.",
       previewLiveSession: "Preview Live Session",
       backHome: "Back To Home",
+      trackLibraryTitle: "Track Library",
+      trackLibrarySubtitle: "Choose a saved track or create a custom start point from your current position.",
+      selectedTrackTitle: "Selected Track",
+      selectedTrackSubtitle: "This track configuration is currently used by the session.",
+      useCurrentPosition: "Use Current Position As Start Point",
+      locationPermissionTitle: "Location Permission",
+      locationPermissionSubtitle: "Foreground location is required for GPS timing and for setting a custom start point.",
+      allowLocation: "Allow Location Access",
+      locationGranted: "Location access granted",
+      locationDenied: "Location access denied",
+      currentPositionLabel: "Current position",
     },
     live: {
       eyebrow: "Live Session",
@@ -199,6 +225,8 @@ export const copy: Record<Locale, Dictionary> = {
       lap: "Runde",
       rec: "REC",
       bestTag: "Bestzeit",
+      clockwiseShort: "Im Uhrzeigersinn",
+      counterclockwiseShort: "Gegen den Uhrzeigersinn",
     },
     home: {
       eyebrow: "LapTimer V1",
@@ -226,6 +254,17 @@ export const copy: Record<Locale, Dictionary> = {
       nextSubtitle: "Spaeter oeffnet sich hier die Karte und erfasst die Koordinaten der Startlinie.",
       previewLiveSession: "Live-Session ansehen",
       backHome: "Zurueck zum Start",
+      trackLibraryTitle: "Streckenbibliothek",
+      trackLibrarySubtitle: "Waehle eine gespeicherte Strecke oder setze einen eigenen Startpunkt ueber deine aktuelle Position.",
+      selectedTrackTitle: "Aktive Strecke",
+      selectedTrackSubtitle: "Diese Streckenkonfiguration wird gerade fuer die Session verwendet.",
+      useCurrentPosition: "Aktuelle Position als Startpunkt nutzen",
+      locationPermissionTitle: "Standortfreigabe",
+      locationPermissionSubtitle: "Standort im Vordergrund wird fuer GPS-Timing und fuer einen eigenen Startpunkt benoetigt.",
+      allowLocation: "Standort erlauben",
+      locationGranted: "Standortfreigabe aktiv",
+      locationDenied: "Standortfreigabe abgelehnt",
+      currentPositionLabel: "Aktuelle Position",
     },
     live: {
       eyebrow: "Live-Session",

@@ -92,3 +92,8 @@ function parseLap(value: string): number | null {
   const [, minutes, seconds, centiseconds] = match;
   return Number(minutes) * 60_000 + Number(seconds) * 1000 + Number(centiseconds) * 10;
 }
+
+export function formatTrackDirection(locale: Locale, direction: "clockwise" | "counterclockwise"): string {
+  const text = copy[locale];
+  return direction === "clockwise" ? text.common.clockwiseShort : text.common.counterclockwiseShort;
+}

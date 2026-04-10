@@ -1,30 +1,98 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { InfoRow } from "../components/InfoRow";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
 import { copy } from "../i18n";
-import { Locale, SessionPreview, ScreenId } from "../types";
+import { Locale, PermissionState, SessionPreview, ScreenId, TrackDefinition } from "../types";
 import { theme } from "../theme";
+import { formatTrackDirection } from "../utils/session";
 
 type TrackSetupScreenProps = {
   locale: Locale;
   session: SessionPreview;
+  selectedTrack: TrackDefinition;
+  permissionState: PermissionState;
+  currentPositionLabel: string;
+  presetTracks: TrackDefinition[];
   onNavigate: (screen: ScreenId) => void;
+  onRequestLocationPermission: () => void;
+  onSelectTrack: (track: TrackDefinition) => void;
+  onUseCurrentPosition: () => void;
 };
 
-export function TrackSetupScreen({ locale, session, onNavigate }: TrackSetupScreenProps) {
+export function TrackSetupScreen({
+  locale,
+  session,
+  selectedTrack,
+  permissionState,
+  currentPositionLabel,
+  presetTracks,
+  onNavigate,
+  onRequestLocationPermission,
+  onSelectTrack,
+  onUseCurrentPosition,
+}: TrackSetupScreenProps) {
   const text = copy[locale];
+  const permissionLabel =
+    permissionState === "granted"
+      ? text.setup.locationGranted
+      : permissionState === "denied"
+        ? text.setup.locationDenied
+        : text.setup.allowLocation;
 
   return (
     <>
       <ScreenHeader eyebrow={text.setup.eyebrow} title={text.setup.title} subtitle={text.setup.subtitle} />
 
+      <SectionCard title={text.setup.locationPermissionTitle} subtitle={text.setup.locationPermissionSubtitle}>
+        <InfoRow label={text.common.gps} value={permissionLabel} />
+        <InfoRow label={text.setup.currentPositionLabel} value={currentPositionLabel} multiline />
+        <PrimaryButton
+          label={text.setup.allowLocation}
+          tone="accent"
+          disabled={permissionState === "granted"}
+          onPress={onRequestLocationPermission}
+        />
+      </SectionCard>
+
+      <SectionCard title={text.setup.trackLibraryTitle} subtitle={text.setup.trackLibrarySubtitle}>
+        <View style={styles.trackList}>
+          {presetTracks.map((track) => {
+            const active = track.id === selectedTrack.id;
+            return (
+              <Pressable
+                key={track.id}
+                onPress={() => onSelectTrack(track)}
+                style={[styles.trackCard, active && styles.trackCardActive]}
+              >
+                <Text style={styles.trackName}>{track.name[locale]}</Text>
+                <Text style={styles.trackMeta}>{track.markerLabel[locale]}</Text>
+                <Text style={styles.trackMeta}>{formatTrackDirection(locale, track.direction)}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <PrimaryButton
+          label={text.setup.useCurrentPosition}
+          tone="soft"
+          disabled={permissionState !== "granted" || currentPositionLabel === "--"}
+          onPress={onUseCurrentPosition}
+        />
+      </SectionCard>
+
+      <SectionCard title={text.setup.selectedTrackTitle} subtitle={text.setup.selectedTrackSubtitle}>
+        <InfoRow label={text.common.track} value={selectedTrack.name[locale]} />
+        <InfoRow label={text.common.marker} value={selectedTrack.markerLabel[locale]} multiline />
+        <InfoRow label={text.common.direction} value={formatTrackDirection(locale, selectedTrack.direction)} />
+        <InfoRow label={text.common.minimumLap} value={`00:${String(Math.floor(selectedTrack.minimumLapMs / 1000)).padStart(2, "0")}.00`} />
+      </SectionCard>
+
       <SectionCard title={text.setup.startFinishTitle} subtitle={text.setup.startFinishSubtitle}>
         <InfoRow label={text.common.track} value={session.trackName} />
-        <InfoRow label={text.common.marker} value={session.startLineLabel} />
-        <InfoRow label={text.common.direction} value={text.common.clockwise} />
+        <InfoRow label={text.common.marker} value={session.startLineLabel} multiline />
+        <InfoRow label={text.common.direction} value={formatTrackDirection(locale, selectedTrack.direction)} />
         <InfoRow label={text.common.minimumLap} value="00:25.00" />
       </SectionCard>
 
@@ -73,5 +141,28 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: theme.spacing.sm,
+  },
+  trackList: {
+    gap: theme.spacing.sm,
+  },
+  trackCard: {
+    backgroundColor: theme.colors.panelSoft,
+    borderRadius: 18,
+    padding: theme.spacing.md,
+    gap: theme.spacing.xs,
+  },
+  trackCardActive: {
+    borderWidth: 2,
+    borderColor: theme.colors.accent,
+  },
+  trackName: {
+    color: theme.colors.textStrong,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  trackMeta: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
   },
 });

@@ -1,6 +1,7 @@
 export type ScreenId = "home" | "setup" | "live" | "summary";
 export type Locale = "en" | "de";
 export type SessionStatus = "idle" | "running" | "paused" | "finished";
+export type PermissionState = "unknown" | "granted" | "denied";
 
 export type Lap = {
   number: number;
@@ -38,4 +39,21 @@ export type LiveSessionState = {
   lastLapTimeMs: number | null;
   lapCount: number;
   laps: Lap[];
+};
+
+export type TrackDefinition = {
+  id: string;
+  name: Record<Locale, string>;
+  markerLabel: Record<Locale, string>;
+  direction: "clockwise" | "counterclockwise";
+  minimumLapMs: number;
+  latitude: number;
+  longitude: number;
+  source: "preset" | "custom";
+};
+
+export type CurrentLocation = {
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
 };
