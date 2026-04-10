@@ -45,6 +45,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: theme.spacing.lg,
     gap: theme.spacing.xs,
+    minHeight: 108,
+    justifyContent: "space-between",
   },
   label: {
     color: theme.colors.textMuted,
