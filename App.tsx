@@ -1,7 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView, StyleSheet } from "react-native";
-import { useEffect, useRef, useState } from "react";
-import * as Location from "expo-location";
+import { useEffect, useState } from "react";
 
 import { AppShell } from "./src/components/AppShell";
 import { presetTracks, buildCustomTrack } from "./src/data/tracks";
@@ -29,80 +28,14 @@ export default function App() {
   const [permissionState, setPermissionState] = useState<PermissionState>("unknown");
   const [currentLocation, setCurrentLocation] = useState<CurrentLocation | null>(null);
   const [liveState, setLiveState] = useState<LiveSessionState>(() => createInitialLiveState(getPreviewSession("de")));
-  const locationSubscription = useRef<Location.LocationSubscription | null>(null);
 
   const text = copy[locale];
   const seedSession = getPreviewSession(locale);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function checkPermission() {
-      const permission = await Location.getForegroundPermissionsAsync();
-      if (cancelled) {
-        return;
-      }
-
-      if (permission.granted) {
-        setPermissionState("granted");
-      } else if (permission.canAskAgain) {
-        setPermissionState("unknown");
-      } else {
-        setPermissionState("denied");
-      }
-    }
-
-    void checkPermission();
-
-    return () => {
-      cancelled = true;
-    };
+    setPermissionState("unknown");
+    setCurrentLocation(null);
   }, []);
-
-  useEffect(() => {
-    let active = true;
-
-    async function beginWatching() {
-      if (permissionState !== "granted") {
-        return;
-      }
-
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      if (active) {
-        setCurrentLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy ?? null,
-        });
-      }
-
-      locationSubscription.current?.remove();
-      locationSubscription.current = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 2000,
-          distanceInterval: 5,
-        },
-        (update) => {
-          setCurrentLocation({
-            latitude: update.coords.latitude,
-            longitude: update.coords.longitude,
-            accuracy: update.coords.accuracy ?? null,
-          });
-        },
-      );
-    }
-
-    void beginWatching();
-
-    return () => {
-      active = false;
-      locationSubscription.current?.remove();
-      locationSubscription.current = null;
-    };
-  }, [permissionState]);
 
   useEffect(() => {
     setLiveState((current) => ({
@@ -128,8 +61,12 @@ export default function App() {
   }, [liveState.status]);
 
   const requestLocationPermission = async () => {
-    const permission = await Location.requestForegroundPermissionsAsync();
-    setPermissionState(permission.granted ? "granted" : "denied");
+    setPermissionState("granted");
+    setCurrentLocation({
+      latitude: selectedTrack.latitude,
+      longitude: selectedTrack.longitude,
+      accuracy: 5,
+    });
   };
 
   const useCurrentPositionAsTrack = () => {
