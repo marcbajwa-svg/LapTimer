@@ -1,0 +1,25 @@
+export const theme = {
+  colors: {
+    background: "#f4efe4",
+    surface: "#fff9ef",
+    panelSoft: "#ece4d7",
+    hero: "#d7e7db",
+    heroAccent: "#345f49",
+    textStrong: "#1d1b19",
+    textMuted: "#5f5a52",
+    textOnDark: "#fff8ef",
+    ink: "#1e2d38",
+    sand: "#ead8b7",
+    clay: "#dfb392",
+    mint: "#b9d6bd",
+    accent: "#c65d3b",
+  },
+  spacing: {
+    xs: 6,
+    sm: 10,
+    md: 16,
+    lg: 22,
+    xl: 30,
+    xxl: 48,
+  },
+};
