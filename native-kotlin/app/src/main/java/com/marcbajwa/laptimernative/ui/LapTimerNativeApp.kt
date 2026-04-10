@@ -21,8 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -50,32 +49,10 @@ fun LapTimerNativeApp() {
     Scaffold(
         containerColor = Color(0xFFF4EFE4),
         bottomBar = {
-            NavigationBar(containerColor = Color(0xFFFFF9EF)) {
-                NavigationBarItem(
-                    selected = activeScreen == Screen.Home,
-                    onClick = { activeScreen = Screen.Home },
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = null) },
-                    label = { Text("Start") },
-                )
-                NavigationBarItem(
-                    selected = activeScreen == Screen.Setup,
-                    onClick = { activeScreen = Screen.Setup },
-                    icon = { Icon(Icons.Outlined.Map, contentDescription = null) },
-                    label = { Text("Setup") },
-                )
-                NavigationBarItem(
-                    selected = activeScreen == Screen.Live,
-                    onClick = { activeScreen = Screen.Live },
-                    icon = { Icon(Icons.Outlined.Speed, contentDescription = null) },
-                    label = { Text("Live") },
-                )
-                NavigationBarItem(
-                    selected = activeScreen == Screen.Summary,
-                    onClick = { activeScreen = Screen.Summary },
-                    icon = { Icon(Icons.Outlined.Dashboard, contentDescription = null) },
-                    label = { Text("Auswertung") },
-                )
-            }
+            BottomBar(
+                activeScreen = activeScreen,
+                onSelect = { activeScreen = it },
+            )
         },
     ) { innerPadding ->
         Surface(
@@ -124,8 +101,8 @@ private fun HomeScreen(
         item {
             CardBlock(title = "Next Step", subtitle = "Get the setup right before you roll out.") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PrimaryAction("Track setup oeffnen", onGoSetup)
-                    SecondaryAction("Live cockpit ansehen", onGoLive)
+                    PrimaryAction(label = "Track setup oeffnen", onClick = onGoSetup)
+                    SecondaryAction(label = "Live cockpit ansehen", onClick = onGoLive)
                 }
             }
         }
@@ -178,7 +155,81 @@ private fun SetupScreen(
             }
         }
         item {
-            PrimaryAction("Go to live cockpit", onGoLive)
+            PrimaryAction(label = "Go to live cockpit", onClick = onGoLive)
+        }
+    }
+}
+
+@Composable
+private fun BottomBar(
+    activeScreen: Screen,
+    onSelect: (Screen) -> Unit,
+) {
+    Card(
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9EF)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            BottomBarButton(
+                modifier = Modifier.weight(1f),
+                label = "Start",
+                selected = activeScreen == Screen.Home,
+                onClick = { onSelect(Screen.Home) },
+                icon = { Icon(Icons.Outlined.Home, contentDescription = null) },
+            )
+            BottomBarButton(
+                modifier = Modifier.weight(1f),
+                label = "Setup",
+                selected = activeScreen == Screen.Setup,
+                onClick = { onSelect(Screen.Setup) },
+                icon = { Icon(Icons.Outlined.Map, contentDescription = null) },
+            )
+            BottomBarButton(
+                modifier = Modifier.weight(1f),
+                label = "Live",
+                selected = activeScreen == Screen.Live,
+                onClick = { onSelect(Screen.Live) },
+                icon = { Icon(Icons.Outlined.Speed, contentDescription = null) },
+            )
+            BottomBarButton(
+                modifier = Modifier.weight(1f),
+                label = "Auswertung",
+                selected = activeScreen == Screen.Summary,
+                onClick = { onSelect(Screen.Summary) },
+                icon = { Icon(Icons.Outlined.Dashboard, contentDescription = null) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomBarButton(
+    modifier: Modifier = Modifier,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
+) {
+    val containerColor = if (selected) Color(0xFF1E2D38) else Color(0xFFECE4D7)
+    val contentColor = if (selected) Color.White else Color(0xFF1D1B19)
+
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        ),
+    ) {
+        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+            icon()
+            Text(label, textAlign = TextAlign.Center)
         }
     }
 }
