@@ -39,8 +39,10 @@ The current product direction is:
 - `src/components`: reusable UI blocks
 - `src/data`: seed data for prototype screens
 - `src/theme.ts`: shared colors and spacing
+- `native-kotlin/`: fresh native Android rebuild in Kotlin + Jetpack Compose
 - `docs/product-brief.md`: product scope and assumptions
 - `docs/lap-detection.md`: technical concept for GPS lap detection
+- `docs/kotlin-rebuild.md`: migration notes for the native Android rebuild
 
 ## Local Development
 
