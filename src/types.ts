@@ -11,6 +11,12 @@ export type SplitMarker = {
   radiusMeters: number;
 };
 
+export type LapTracePoint = {
+  latitude: number;
+  longitude: number;
+  elapsedMs: number;
+};
+
 export type Lap = {
   number: number;
   time: string;
@@ -48,7 +54,9 @@ export type LiveSessionState = {
   bestLapTimeMs: number | null;
   lastLapTimeMs: number | null;
   bestLapSplitTimesMs: number[] | null;
+  bestLapTrace: LapTracePoint[] | null;
   currentLapSplitTimesMs: number[];
+  currentLapTrace: LapTracePoint[];
   nextSplitIndex: number;
   lapCount: number;
   laps: Lap[];

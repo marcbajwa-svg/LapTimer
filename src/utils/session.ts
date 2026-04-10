@@ -1,7 +1,7 @@
-import { CurrentLocation, Lap, LiveSessionState, Locale, SessionPreview, TrackDefinition } from "../types";
+import { CurrentLocation, Lap, LapTracePoint, LiveSessionState, Locale, SessionPreview, TrackDefinition } from "../types";
 import { copy } from "../i18n";
 import { formatDuration, formatSessionClock, formatSignedDuration } from "./time";
-import { distanceMeters, isWithinSplitRadius } from "./location";
+import { distanceMeters, findNearestTracePoint, isWithinSplitRadius } from "./location";
 
 export function createInitialLiveState(seed: SessionPreview): LiveSessionState {
   return {
@@ -12,7 +12,9 @@ export function createInitialLiveState(seed: SessionPreview): LiveSessionState {
     bestLapTimeMs: parseLap(seed.bestLap),
     lastLapTimeMs: null,
     bestLapSplitTimesMs: null,
+    bestLapTrace: null,
     currentLapSplitTimesMs: [],
+    currentLapTrace: [],
     nextSplitIndex: 0,
     lapCount: 0,
     laps: [],
@@ -158,15 +160,19 @@ export function finishLap(
   const nextBestTime = isBestLap ? state.currentLapTimeMs : state.bestLapTimeMs;
   const nextBestSplits =
     isBestLap && state.currentLapSplitTimesMs.length > 0 ? [...state.currentLapSplitTimesMs] : state.bestLapSplitTimesMs;
+  const nextBestTrace =
+    isBestLap && state.currentLapTrace.length > 0 ? [...state.currentLapTrace] : state.bestLapTrace;
 
   return {
     ...state,
     bestLapTimeMs: nextBestTime,
     bestLapSplitTimesMs: nextBestSplits,
+    bestLapTrace: nextBestTrace,
     lastLapTimeMs: state.currentLapTimeMs,
     currentLapTimeMs: 0,
     currentDeltaMs: null,
     currentLapSplitTimesMs: [],
+    currentLapTrace: [],
     nextSplitIndex: 0,
     lapCount: state.lapCount + 1,
     laps: [nextLap, ...state.laps],
@@ -182,20 +188,73 @@ export function syncProgressDelta(
     return state;
   }
 
-  if (state.bestLapTimeMs === null) {
-    return maybeRegisterSplit(state, track, location);
+  const withTrace = appendTracePoint(state, location);
+
+  if (withTrace.bestLapTimeMs === null) {
+    return maybeRegisterSplit(withTrace, track, location);
   }
 
-  const interpolation = buildInterpolatedDelta(state, track, location);
+  const traceDelta = buildTraceDelta(withTrace, location);
+  if (traceDelta !== null) {
+    return maybeRegisterSplit(
+      {
+        ...withTrace,
+        currentDeltaMs: traceDelta,
+      },
+      track,
+      location,
+    );
+  }
+
+  const interpolation = buildInterpolatedDelta(withTrace, track, location);
   const withInterpolatedDelta =
     interpolation === null
-      ? state
+      ? withTrace
       : {
-          ...state,
+          ...withTrace,
           currentDeltaMs: interpolation,
         };
 
   return maybeRegisterSplit(withInterpolatedDelta, track, location);
+}
+
+function appendTracePoint(state: LiveSessionState, location: CurrentLocation): LiveSessionState {
+  const nextPoint: LapTracePoint = {
+    latitude: location.latitude,
+    longitude: location.longitude,
+    elapsedMs: state.currentLapTimeMs,
+  };
+
+  const previousPoint = state.currentLapTrace[state.currentLapTrace.length - 1];
+  if (previousPoint && distanceMeters(previousPoint, nextPoint) < 4) {
+    return state;
+  }
+
+  return {
+    ...state,
+    currentLapTrace: [...state.currentLapTrace, nextPoint],
+  };
+}
+
+function buildTraceDelta(
+  state: LiveSessionState,
+  location: CurrentLocation,
+): number | null {
+  if (!state.bestLapTrace || state.bestLapTrace.length < 3) {
+    return null;
+  }
+
+  const nearest = findNearestTracePoint(location, state.bestLapTrace);
+  if (!nearest) {
+    return null;
+  }
+
+  const maxMatchDistance = (location.accuracy ?? 15) + 20;
+  if (nearest.distanceMeters > maxMatchDistance) {
+    return null;
+  }
+
+  return state.currentLapTimeMs - nearest.point.elapsedMs;
 }
 
 function buildInterpolatedDelta(

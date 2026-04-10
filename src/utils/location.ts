@@ -1,4 +1,4 @@
-import { CurrentLocation, SplitMarker } from "../types";
+import { CurrentLocation, LapTracePoint, SplitMarker } from "../types";
 
 const EARTH_RADIUS_METERS = 6_371_000;
 
@@ -22,6 +22,33 @@ export function isWithinSplitRadius(location: CurrentLocation, splitMarker: Spli
   const distance = distanceMeters(location, splitMarker);
   const accuracyPadding = location.accuracy ?? 0;
   return distance <= splitMarker.radiusMeters + accuracyPadding;
+}
+
+export function findNearestTracePoint(
+  location: CurrentLocation,
+  trace: LapTracePoint[],
+): { point: LapTracePoint; distanceMeters: number } | null {
+  if (trace.length === 0) {
+    return null;
+  }
+
+  let nearest = trace[0];
+  let nearestDistance = distanceMeters(location, trace[0]);
+
+  for (let index = 1; index < trace.length; index += 1) {
+    const candidate = trace[index];
+    const candidateDistance = distanceMeters(location, candidate);
+
+    if (candidateDistance < nearestDistance) {
+      nearest = candidate;
+      nearestDistance = candidateDistance;
+    }
+  }
+
+  return {
+    point: nearest,
+    distanceMeters: nearestDistance,
+  };
 }
 
 function toRadians(value: number): number {
