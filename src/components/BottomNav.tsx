@@ -6,15 +6,16 @@ import { theme } from "../theme";
 type BottomNavProps = {
   activeScreen: ScreenId;
   labels: Record<ScreenId, string>;
+  compact?: boolean;
   onNavigate: (screen: ScreenId) => void;
 };
 
 const tabs: ScreenId[] = ["home", "setup", "live", "summary"];
 
-export function BottomNav({ activeScreen, labels, onNavigate }: BottomNavProps) {
+export function BottomNav({ activeScreen, labels, compact = false, onNavigate }: BottomNavProps) {
   return (
-    <View style={styles.wrap}>
-      <View style={styles.nav}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
+      <View style={[styles.nav, compact && styles.navCompact]}>
         {tabs.map((tab) => {
           const active = tab === activeScreen;
 
@@ -22,9 +23,9 @@ export function BottomNav({ activeScreen, labels, onNavigate }: BottomNavProps) 
             <Pressable
               key={tab}
               onPress={() => onNavigate(tab)}
-              style={[styles.item, active && styles.itemActive]}
+              style={[styles.item, compact && styles.itemCompact, active && styles.itemActive]}
             >
-              <Text style={[styles.label, active && styles.labelActive]}>{labels[tab]}</Text>
+              <Text style={[styles.label, compact && styles.labelCompact, active && styles.labelActive]}>{labels[tab]}</Text>
             </Pressable>
           );
         })}
@@ -42,6 +43,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
   },
+  wrapCompact: {
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+  },
   nav: {
     flexDirection: "row",
     gap: theme.spacing.sm,
@@ -54,12 +59,20 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 6,
   },
+  navCompact: {
+    borderRadius: 22,
+    padding: theme.spacing.xs,
+  },
   item: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     minHeight: 52,
     borderRadius: 18,
+  },
+  itemCompact: {
+    minHeight: 42,
+    borderRadius: 14,
   },
   itemActive: {
     backgroundColor: theme.colors.ink,
@@ -68,6 +81,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 14,
     fontWeight: "700",
+  },
+  labelCompact: {
+    fontSize: 12,
   },
   labelActive: {
     color: theme.colors.textOnDark,
