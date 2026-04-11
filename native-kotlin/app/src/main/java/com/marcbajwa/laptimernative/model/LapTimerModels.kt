@@ -1,7 +1,6 @@
 package com.marcbajwa.laptimernative.model
 
 enum class Screen {
-    Home,
     Setup,
     Live,
     Summary,

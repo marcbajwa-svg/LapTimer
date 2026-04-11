@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material.icons.outlined.ScreenRotation
@@ -87,17 +86,9 @@ private enum class SessionMode {
 }
 
 private data class NativeCopy(
-    val navHome: String,
     val navSetup: String,
     val navLive: String,
     val navSummary: String,
-    val homeEyebrow: String,
-    val homeTitle: String,
-    val homeSubtitle: String,
-    val nextStepTitle: String,
-    val nextStepSubtitle: String,
-    val openTrackSetup: String,
-    val openLiveCockpit: String,
     val setupEyebrow: String,
     val setupTitle: String,
     val setupSubtitle: String,
@@ -156,17 +147,9 @@ private data class NativeCopy(
 )
 
 private val germanCopy = NativeCopy(
-    navHome = "Start",
     navSetup = "Setup",
     navLive = "Live",
     navSummary = "Auswertung",
-    homeEyebrow = "LapTimer Native",
-    homeTitle = "Kotlin-Neuaufbau fuer einen echten Android-Laptimer",
-    homeSubtitle = "Diese native Version behaelt den Produktfluss aus dem Expo-Prototyp, bringt uns aber in eine Android-first-Architektur mit Compose.",
-    nextStepTitle = "Naechster Schritt",
-    nextStepSubtitle = "Richte zuerst das Setup sauber ein, bevor du rausfaehrst.",
-    openTrackSetup = "Track-Setup oeffnen",
-    openLiveCockpit = "Live-Cockpit ansehen",
     setupEyebrow = "Track Setup",
     setupTitle = "Naechste Rennstrecke zuerst vorschlagen",
     setupSubtitle = "Der native Neuaufbau soll die wahrscheinlich naechste Strecke direkt aus GPS vorschlagen und sonst auf einen manuellen Startpunkt zurueckfallen.",
@@ -225,17 +208,9 @@ private val germanCopy = NativeCopy(
 )
 
 private val englishCopy = NativeCopy(
-    navHome = "Home",
     navSetup = "Setup",
     navLive = "Live",
     navSummary = "Summary",
-    homeEyebrow = "LapTimer Native",
-    homeTitle = "Kotlin rebuild for a real Android track tool",
-    homeSubtitle = "This native version keeps the product flow from the Expo prototype, but moves us into an Android-first architecture with Compose.",
-    nextStepTitle = "Next Step",
-    nextStepSubtitle = "Get the setup right before you roll out.",
-    openTrackSetup = "Open track setup",
-    openLiveCockpit = "Open live cockpit",
     setupEyebrow = "Track Setup",
     setupTitle = "Suggest the nearest circuit first",
     setupSubtitle = "The native rebuild should immediately surface the likely circuit from GPS, then fall back to a manual start point when nothing matches nearby.",
@@ -300,7 +275,7 @@ fun LapTimerNativeApp() {
     val store = remember { LocalLapTimerStore(context.applicationContext) }
     val telemetryExporter = remember { TelemetryExporter(context.applicationContext) }
     val storedManualTrack = remember { store.loadManualTrack() }
-    var activeScreen by remember { mutableStateOf(Screen.Home) }
+    var activeScreen by remember { mutableStateOf(Screen.Setup) }
     var selectedTrack by remember { mutableStateOf(storedManualTrack ?: TrackRepository.nearbySuggestion) }
     var language by remember { mutableStateOf(AppLanguage.DE) }
     var orientationMode by remember { mutableStateOf(OrientationMode.LANDSCAPE) }
@@ -357,7 +332,7 @@ fun LapTimerNativeApp() {
         }
     }
 
-    LaunchedEffect(selectedTrack.id) {
+    fun startNewSession() {
         lapTimingState = lapTimingEngine.reset(
             track = selectedTrack,
             savedBestLapMillis = store.loadBestLapMillis(selectedTrack.id),
@@ -367,6 +342,17 @@ fun LapTimerNativeApp() {
         maxRightLeanDegrees = 0f
         telemetrySamples = emptyList()
         lastTelemetryExportFile = null
+    }
+
+    fun openLiveSession() {
+        if (sessionMode == SessionMode.ENDED) {
+            startNewSession()
+        }
+        activeScreen = Screen.Live
+    }
+
+    LaunchedEffect(selectedTrack.id) {
+        startNewSession()
     }
 
     DisposableEffect(Unit) {
@@ -446,7 +432,13 @@ fun LapTimerNativeApp() {
                 BottomBar(
                     copy = copy,
                     activeScreen = activeScreen,
-                    onSelect = { activeScreen = it },
+                    onSelect = { selectedScreen ->
+                        if (selectedScreen == Screen.Live) {
+                            openLiveSession()
+                        } else {
+                            activeScreen = selectedScreen
+                        }
+                    },
                 )
             }
         },
@@ -458,11 +450,6 @@ fun LapTimerNativeApp() {
             color = Color(0xFFF4EFE4),
         ) {
             when (activeScreen) {
-                Screen.Home -> HomeScreen(
-                    copy = copy,
-                    onGoSetup = { activeScreen = Screen.Setup },
-                    onGoLive = { activeScreen = Screen.Live },
-                )
                 Screen.Setup -> SetupScreen(
                     copy = copy,
                     nearbyTrack = nearbyTrack,
@@ -541,7 +528,7 @@ fun LapTimerNativeApp() {
                     },
                     setupStatusMessage = setupStatusMessage,
                     onSelectTrack = { selectedTrack = it },
-                    onGoLive = { activeScreen = Screen.Live },
+                    onGoLive = { openLiveSession() },
                 )
                 Screen.Live -> LiveScreen(
                     copy = copy,
@@ -595,7 +582,7 @@ fun LapTimerNativeApp() {
                     telemetryStatus = telemetryStatusLabel,
                     lastTelemetryExportFile = lastTelemetryExportFile,
                     onGoSetup = { activeScreen = Screen.Setup },
-                    onGoLive = { activeScreen = Screen.Live },
+                    onGoLive = { openLiveSession() },
                     onExportTelemetry = {
                         val exportFile = lastTelemetryExportFile
                             ?: telemetryExporter.exportCsv(selectedTrack, telemetrySamples)
@@ -656,36 +643,6 @@ private fun TopControlsBar(
                     OrientationMode.PORTRAIT -> copy.orientationPortrait
                 },
             )
-        }
-    }
-}
-
-@Composable
-private fun HomeScreen(
-    copy: NativeCopy,
-    onGoSetup: () -> Unit,
-    onGoLive: () -> Unit,
-) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        item {
-            HeroCard(
-                eyebrow = copy.homeEyebrow,
-                title = copy.homeTitle,
-                subtitle = copy.homeSubtitle,
-            )
-        }
-        item {
-            CardBlock(title = copy.nextStepTitle, subtitle = copy.nextStepSubtitle) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PrimaryAction(label = copy.openTrackSetup, onClick = onGoSetup)
-                    SecondaryAction(label = copy.openLiveCockpit, onClick = onGoLive)
-                }
-            }
         }
     }
 }
@@ -796,13 +753,6 @@ private fun BottomBar(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            BottomBarButton(
-                modifier = Modifier.weight(1f),
-                label = copy.navHome,
-                selected = activeScreen == Screen.Home,
-                onClick = { onSelect(Screen.Home) },
-                icon = { Icon(Icons.Outlined.Home, contentDescription = null) },
-            )
             BottomBarButton(
                 modifier = Modifier.weight(1f),
                 label = copy.navSetup,
