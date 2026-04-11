@@ -58,7 +58,10 @@ import com.marcbajwa.laptimernative.model.LapTimingState
 import com.marcbajwa.laptimernative.model.LiveSessionSnapshot
 import com.marcbajwa.laptimernative.model.Screen
 import com.marcbajwa.laptimernative.model.TrackPreset
+import com.marcbajwa.laptimernative.sensor.LeanAngleTracker
+import com.marcbajwa.laptimernative.sensor.normalizeDegrees
 import com.marcbajwa.laptimernative.timing.LapTimingEngine
+import kotlin.math.abs
 
 private enum class AppLanguage {
     DE,
@@ -102,6 +105,12 @@ private data class NativeCopy(
     val liveCurrentLap: String,
     val liveDelta: String,
     val liveSpeed: String,
+    val liveLean: String,
+    val leanLeft: String,
+    val leanRight: String,
+    val calibrateLean: String,
+    val leanCalibrated: String,
+    val leanWaiting: String,
     val liveBestLap: String,
     val liveLastLap: String,
     val liveTotalLaps: String,
@@ -157,6 +166,12 @@ private val germanCopy = NativeCopy(
     liveCurrentLap = "AKTUELLE RUNDE",
     liveDelta = "DELTA ZUR BESTZEIT",
     liveSpeed = "GESCHWINDIGKEIT",
+    liveLean = "SCHRAEGLAGE",
+    leanLeft = "MAX LINKS",
+    leanRight = "MAX RECHTS",
+    calibrateLean = "Schraeglage kalibrieren",
+    leanCalibrated = "Schraeglage kalibriert",
+    leanWaiting = "Sensor wartet",
     liveBestLap = "BESTE RUNDE",
     liveLastLap = "LETZTE RUNDE",
     liveTotalLaps = "RUNDEN",
@@ -212,6 +227,12 @@ private val englishCopy = NativeCopy(
     liveCurrentLap = "CURRENT LAP",
     liveDelta = "DELTA TO BEST",
     liveSpeed = "SPEED",
+    liveLean = "LEAN ANGLE",
+    leanLeft = "MAX LEFT",
+    leanRight = "MAX RIGHT",
+    calibrateLean = "Calibrate lean",
+    leanCalibrated = "Lean calibrated",
+    leanWaiting = "Waiting for sensor",
     liveBestLap = "BEST LAP",
     liveLastLap = "LAST LAP",
     liveTotalLaps = "LAPS",
@@ -257,6 +278,11 @@ fun LapTimerNativeApp() {
     val lapTimingEngine = remember { LapTimingEngine() }
     var lapTimingState by remember { mutableStateOf(LapTimingState()) }
     var sessionMode by remember { mutableStateOf(SessionMode.RUNNING) }
+    var rawLeanDegrees by remember { mutableStateOf<Float?>(null) }
+    var leanBaselineDegrees by remember { mutableStateOf<Float?>(null) }
+    var currentLeanDegrees by remember { mutableStateOf<Float?>(null) }
+    var maxLeftLeanDegrees by remember { mutableStateOf(0f) }
+    var maxRightLeanDegrees by remember { mutableStateOf(0f) }
 
     val copy = if (language == AppLanguage.DE) germanCopy else englishCopy
     val nearbyTrack = TrackRepository.findNearbyTrack(currentPosition)
@@ -272,6 +298,9 @@ fun LapTimerNativeApp() {
             else -> "${TrackRepository.formatAccuracy(currentPosition)} - ${lapTimingState.status}"
         },
         speedLabel = TrackRepository.formatSpeed(currentPosition),
+        leanCurrentLabel = currentLeanDegrees.formatLean(),
+        leanLeftLabel = maxLeftLeanDegrees.formatLean(),
+        leanRightLabel = maxRightLeanDegrees.formatLean(),
     )
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -294,6 +323,29 @@ fun LapTimerNativeApp() {
     LaunchedEffect(selectedTrack.id) {
         lapTimingState = lapTimingEngine.reset(selectedTrack)
         sessionMode = SessionMode.RUNNING
+        maxLeftLeanDegrees = 0f
+        maxRightLeanDegrees = 0f
+    }
+
+    DisposableEffect(Unit) {
+        val tracker = LeanAngleTracker(context) { rawRollDegrees ->
+            rawLeanDegrees = rawRollDegrees
+            val baseline = leanBaselineDegrees
+            if (baseline != null) {
+                val relativeLean = normalizeDegrees(rawRollDegrees - baseline)
+                currentLeanDegrees = relativeLean
+                if (sessionMode == SessionMode.RUNNING) {
+                    if (relativeLean < 0f && abs(relativeLean) > maxLeftLeanDegrees) {
+                        maxLeftLeanDegrees = abs(relativeLean)
+                    }
+                    if (relativeLean > 0f && relativeLean > maxRightLeanDegrees) {
+                        maxRightLeanDegrees = relativeLean
+                    }
+                }
+            }
+        }
+        tracker.start()
+        onDispose { tracker.stop() }
     }
 
     DisposableEffect(locationPermissionGranted, selectedTrack.id, sessionMode) {
@@ -406,6 +458,18 @@ fun LapTimerNativeApp() {
                                 selectedTrack = track
                                 setupStatusMessage = copy.manualStartReady
                             }
+                        }
+                    },
+                    onCalibrateLean = {
+                        val rawLean = rawLeanDegrees
+                        if (rawLean == null) {
+                            setupStatusMessage = copy.leanWaiting
+                        } else {
+                            leanBaselineDegrees = rawLean
+                            currentLeanDegrees = 0f
+                            maxLeftLeanDegrees = 0f
+                            maxRightLeanDegrees = 0f
+                            setupStatusMessage = copy.leanCalibrated
                         }
                     },
                     setupStatusMessage = setupStatusMessage,
@@ -546,6 +610,7 @@ private fun SetupScreen(
     locationStatus: String,
     onRequestLocationPermission: () -> Unit,
     onSetManualStartPoint: () -> Unit,
+    onCalibrateLean: () -> Unit,
     setupStatusMessage: String?,
     onSelectTrack: (TrackPreset) -> Unit,
     onGoLive: () -> Unit,
@@ -584,6 +649,7 @@ private fun SetupScreen(
                         PrimaryAction(label = copy.useSuggestedTrack, onClick = { onSelectTrack(nearbyTrack) })
                     }
                     SecondaryAction(label = copy.setManualStartPoint, onClick = onSetManualStartPoint)
+                    SecondaryAction(label = copy.calibrateLean, onClick = onCalibrateLean)
                     if (setupStatusMessage != null) {
                         Text(setupStatusMessage, color = Color(0xFF345F49), fontWeight = FontWeight.Bold)
                     }
@@ -718,6 +784,11 @@ private fun LiveScreen(
                 modifier = Modifier.weight(1f),
                 title = copy.liveSpeed,
                 value = snapshot.speedLabel,
+            )
+            CompactHeaderCard(
+                modifier = Modifier.weight(1f),
+                title = copy.liveLean,
+                value = snapshot.leanCurrentLabel,
             )
             CompactHeaderCard(
                 modifier = Modifier.weight(1f),
@@ -903,9 +974,21 @@ private fun SummaryStatsGrid(
             modifier = modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveBestLap, value = snapshot.bestLap, tone = Color(0xFFB9D6BD))
-            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveLastLap, value = snapshot.lastLap, tone = Color(0xFFDFB392))
-            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveTotalLaps, value = snapshot.totalLaps.toString(), tone = Color(0xFFECE4D7))
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveBestLap, value = snapshot.bestLap, tone = Color(0xFFB9D6BD))
+                SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveLastLap, value = snapshot.lastLap, tone = Color(0xFFDFB392))
+            }
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveTotalLaps, value = snapshot.totalLaps.toString(), tone = Color(0xFFECE4D7))
+                SummaryStatCard(modifier = Modifier.weight(1f), label = copy.leanLeft, value = snapshot.leanLeftLabel, tone = Color(0xFFD5E5F0))
+                SummaryStatCard(modifier = Modifier.weight(1f), label = copy.leanRight, value = snapshot.leanRightLabel, tone = Color(0xFFF1D0B7))
+            }
         }
     } else {
         Row(
@@ -915,6 +998,8 @@ private fun SummaryStatsGrid(
             SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveBestLap, value = snapshot.bestLap, tone = Color(0xFFB9D6BD))
             SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveLastLap, value = snapshot.lastLap, tone = Color(0xFFDFB392))
             SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveTotalLaps, value = snapshot.totalLaps.toString(), tone = Color(0xFFECE4D7))
+            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.leanLeft, value = snapshot.leanLeftLabel, tone = Color(0xFFD5E5F0))
+            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.leanRight, value = snapshot.leanRightLabel, tone = Color(0xFFF1D0B7))
         }
     }
 }
@@ -1123,6 +1208,13 @@ private fun CurrentPosition.formatCoordinates(): String {
 private fun CurrentPosition.hasManualStartAccuracy(): Boolean {
     val accuracy = accuracyMeters ?: return false
     return accuracy <= 20f
+}
+
+private fun Float?.formatLean(): String {
+    if (this == null) {
+        return "-- deg"
+    }
+    return "${abs(this).toInt()} deg"
 }
 
 private fun Long?.formatLapTime(): String {

@@ -37,6 +37,9 @@ data class LiveSessionSnapshot(
     val totalLaps: Int,
     val gpsStatus: String,
     val speedLabel: String,
+    val leanCurrentLabel: String,
+    val leanLeftLabel: String,
+    val leanRightLabel: String,
 )
 
 data class LapTimingState(
