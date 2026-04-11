@@ -148,14 +148,14 @@ class LapTimingEngine {
         return state
     }
 
-    fun reset(track: TrackPreset): LapTimingState {
+    fun reset(track: TrackPreset, savedBestLapMillis: Long? = null): LapTimingState {
         activeTrackId = track.id
         activeLapStartMillis = null
         pausedAtMillis = null
         hasLeftStartZone = false
         learnedStartHeadingDegrees = track.startHeadingDegrees
         previousStartProjection = null
-        state = LapTimingState(status = "Zum Startpunkt fahren")
+        state = LapTimingState(bestLapMillis = savedBestLapMillis, status = "Zum Startpunkt fahren")
         return state
     }
 

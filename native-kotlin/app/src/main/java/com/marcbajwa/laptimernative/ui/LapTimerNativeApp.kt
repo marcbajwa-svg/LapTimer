@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.marcbajwa.laptimernative.data.LocalLapTimerStore
 import com.marcbajwa.laptimernative.data.TrackRepository
 import com.marcbajwa.laptimernative.location.NativeLocationTracker
 import com.marcbajwa.laptimernative.model.CurrentPosition
@@ -267,13 +268,15 @@ private val englishCopy = NativeCopy(
 fun LapTimerNativeApp() {
     val context = LocalContext.current
     val activity = context.findActivity()
+    val store = remember { LocalLapTimerStore(context.applicationContext) }
+    val storedManualTrack = remember { store.loadManualTrack() }
     var activeScreen by remember { mutableStateOf(Screen.Home) }
-    var selectedTrack by remember { mutableStateOf(TrackRepository.nearbySuggestion) }
+    var selectedTrack by remember { mutableStateOf(storedManualTrack ?: TrackRepository.nearbySuggestion) }
     var language by remember { mutableStateOf(AppLanguage.DE) }
     var orientationMode by remember { mutableStateOf(OrientationMode.LANDSCAPE) }
     var currentPosition by remember { mutableStateOf<CurrentPosition?>(null) }
     var locationPermissionGranted by remember { mutableStateOf(context.hasLocationPermission()) }
-    var manualTrack by remember { mutableStateOf<TrackPreset?>(null) }
+    var manualTrack by remember { mutableStateOf(storedManualTrack) }
     var setupStatusMessage by remember { mutableStateOf<String?>(null) }
     val lapTimingEngine = remember { LapTimingEngine() }
     var lapTimingState by remember { mutableStateOf(LapTimingState()) }
@@ -321,7 +324,10 @@ fun LapTimerNativeApp() {
     }
 
     LaunchedEffect(selectedTrack.id) {
-        lapTimingState = lapTimingEngine.reset(selectedTrack)
+        lapTimingState = lapTimingEngine.reset(
+            track = selectedTrack,
+            savedBestLapMillis = store.loadBestLapMillis(selectedTrack.id),
+        )
         sessionMode = SessionMode.RUNNING
         maxLeftLeanDegrees = 0f
         maxRightLeanDegrees = 0f
@@ -355,7 +361,11 @@ fun LapTimerNativeApp() {
             val tracker = NativeLocationTracker(context) { position ->
                 currentPosition = position
                 if (sessionMode == SessionMode.RUNNING) {
-                    lapTimingState = lapTimingEngine.update(position, selectedTrack)
+                    lapTimingState = lapTimingEngine.update(position, selectedTrack).also { updatedState ->
+                        updatedState.bestLapMillis?.let { bestLapMillis ->
+                            store.saveBestLapMillis(selectedTrack.id, bestLapMillis)
+                        }
+                    }
                 }
             }
             tracker.start()
@@ -456,6 +466,7 @@ fun LapTimerNativeApp() {
                                 )
                                 manualTrack = track
                                 selectedTrack = track
+                                store.saveManualTrack(track)
                                 setupStatusMessage = copy.manualStartReady
                             }
                         }
@@ -490,7 +501,11 @@ fun LapTimerNativeApp() {
                         )
                     },
                     onMarkLap = {
-                        lapTimingState = lapTimingEngine.markManualLap()
+                        lapTimingState = lapTimingEngine.markManualLap().also { updatedState ->
+                            updatedState.bestLapMillis?.let { bestLapMillis ->
+                                store.saveBestLapMillis(selectedTrack.id, bestLapMillis)
+                            }
+                        }
                     },
                     onTogglePause = {
                         if (sessionMode == SessionMode.PAUSED) {
@@ -502,7 +517,16 @@ fun LapTimerNativeApp() {
                         }
                     },
                     onEndSession = {
-                        lapTimingState = lapTimingEngine.end()
+                        val endedState = lapTimingEngine.end()
+                        lapTimingState = endedState
+                        store.saveLastSession(
+                            track = selectedTrack,
+                            totalLaps = endedState.totalLaps,
+                            bestLapMillis = endedState.bestLapMillis,
+                            lastLapMillis = endedState.lastLapMillis,
+                            maxLeftLeanDegrees = maxLeftLeanDegrees,
+                            maxRightLeanDegrees = maxRightLeanDegrees,
+                        )
                         sessionMode = SessionMode.ENDED
                         activeScreen = Screen.Summary
                     },
