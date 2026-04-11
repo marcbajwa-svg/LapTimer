@@ -56,9 +56,9 @@ object TrackRepository {
         totalLaps = 5,
         gpsStatus = "Stable GPS lock",
         speedLabel = "-- km/h",
-        leanCurrentLabel = "-- deg",
-        leanLeftLabel = "-- deg",
-        leanRightLabel = "-- deg",
+        leanCurrentLabel = "--°",
+        leanLeftLabel = "--°",
+        leanRightLabel = "--°",
     )
 
     fun findNearbyTrack(position: CurrentPosition?): TrackPreset? {

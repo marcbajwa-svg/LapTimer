@@ -1212,9 +1212,9 @@ private fun CurrentPosition.hasManualStartAccuracy(): Boolean {
 
 private fun Float?.formatLean(): String {
     if (this == null) {
-        return "-- deg"
+        return "--°"
     }
-    return "${abs(this).toInt()} deg"
+    return "${abs(this).toInt()}°"
 }
 
 private fun Long?.formatLapTime(): String {
