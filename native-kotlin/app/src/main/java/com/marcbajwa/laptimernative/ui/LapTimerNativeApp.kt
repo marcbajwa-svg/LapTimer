@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -277,6 +278,7 @@ fun LapTimerNativeApp() {
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true ||
             context.hasLocationPermission()
     }
+    val showAppChrome = activeScreen != Screen.Live && activeScreen != Screen.Summary
 
     LaunchedEffect(orientationMode) {
         context.findActivity()?.requestedOrientation = when (orientationMode) {
@@ -309,7 +311,7 @@ fun LapTimerNativeApp() {
     Scaffold(
         containerColor = Color(0xFFF4EFE4),
         topBar = {
-            if (activeScreen != Screen.Live) {
+            if (showAppChrome) {
                 TopControlsBar(
                     copy = copy,
                     orientationMode = orientationMode,
@@ -328,7 +330,7 @@ fun LapTimerNativeApp() {
             }
         },
         bottomBar = {
-            if (activeScreen != Screen.Live) {
+            if (showAppChrome) {
                 BottomBar(
                     copy = copy,
                     activeScreen = activeScreen,
@@ -433,7 +435,13 @@ fun LapTimerNativeApp() {
                         activeScreen = Screen.Summary
                     },
                 )
-                Screen.Summary -> SummaryScreen(copy = copy, selectedTrack = selectedTrack, snapshot = liveSnapshot)
+                Screen.Summary -> SummaryScreen(
+                    copy = copy,
+                    selectedTrack = selectedTrack,
+                    snapshot = liveSnapshot,
+                    onGoSetup = { activeScreen = Screen.Setup },
+                    onGoLive = { activeScreen = Screen.Live },
+                )
             }
         }
     }
@@ -787,34 +795,142 @@ private fun SummaryScreen(
     copy: NativeCopy,
     selectedTrack: TrackPreset,
     snapshot: LiveSessionSnapshot,
+    onGoSetup: () -> Unit,
+    onGoLive: () -> Unit,
 ) {
-    LazyColumn(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(12.dp),
     ) {
-        item {
-            HeroCard(
-                eyebrow = copy.summaryEyebrow,
-                title = copy.summaryTitle,
-                subtitle = copy.summarySubtitle,
-            )
-        }
-        item {
-            CardBlock(title = copy.selectedTrackTitle, subtitle = copy.selectedTrackSubtitle) {
-                Text(selectedTrack.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(selectedTrack.markerLabel, color = Color(0xFF5F5A52))
+        val isWide = maxWidth > maxHeight
+        if (isWide) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                SummaryHeaderCard(
+                    modifier = Modifier.weight(1f),
+                    copy = copy,
+                    selectedTrack = selectedTrack,
+                    snapshot = snapshot,
+                    onGoSetup = onGoSetup,
+                    onGoLive = onGoLive,
+                )
+                SummaryStatsGrid(
+                    modifier = Modifier.weight(1.2f),
+                    copy = copy,
+                    snapshot = snapshot,
+                    stacked = false,
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                SummaryHeaderCard(
+                    modifier = Modifier.weight(0.9f),
+                    copy = copy,
+                    selectedTrack = selectedTrack,
+                    snapshot = snapshot,
+                    onGoSetup = onGoSetup,
+                    onGoLive = onGoLive,
+                )
+                SummaryStatsGrid(
+                    modifier = Modifier.weight(1.1f),
+                    copy = copy,
+                    snapshot = snapshot,
+                    stacked = true,
+                )
             }
         }
-        item {
-            CardBlock(title = copy.navSummary, subtitle = snapshot.gpsStatus) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    MetricChip(modifier = Modifier.weight(1f), label = copy.liveTotalLaps, value = snapshot.totalLaps.toString(), tone = Color(0xFFECE4D7))
-                    MetricChip(modifier = Modifier.weight(1f), label = copy.liveBestLap, value = snapshot.bestLap, tone = Color(0xFFB9D6BD))
-                    MetricChip(modifier = Modifier.weight(1f), label = copy.liveLastLap, value = snapshot.lastLap, tone = Color(0xFFDFB392))
-                }
+    }
+}
+
+@Composable
+private fun SummaryHeaderCard(
+    modifier: Modifier = Modifier,
+    copy: NativeCopy,
+    selectedTrack: TrackPreset,
+    snapshot: LiveSessionSnapshot,
+    onGoSetup: () -> Unit,
+    onGoLive: () -> Unit,
+) {
+    Card(
+        modifier = modifier.fillMaxSize(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9EF)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(copy.summaryEyebrow.uppercase(), color = Color(0xFF345F49), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(copy.navSummary, color = Color(0xFF1D1B19), fontSize = 34.sp, fontWeight = FontWeight.Black, lineHeight = 36.sp)
+                Text(selectedTrack.name, color = Color(0xFF5F5A52), fontWeight = FontWeight.Bold)
+                Text(selectedTrack.markerLabel, color = Color(0xFF5F5A52), fontSize = 13.sp, lineHeight = 16.sp)
+                Text(snapshot.gpsStatus, color = Color(0xFF345F49), fontSize = 13.sp, lineHeight = 16.sp)
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SecondaryAction(label = copy.navSetup, onClick = onGoSetup, modifier = Modifier.weight(1f))
+                PrimaryAction(label = copy.navLive, onClick = onGoLive, modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryStatsGrid(
+    modifier: Modifier = Modifier,
+    copy: NativeCopy,
+    snapshot: LiveSessionSnapshot,
+    stacked: Boolean,
+) {
+    if (stacked) {
+        Column(
+            modifier = modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveBestLap, value = snapshot.bestLap, tone = Color(0xFFB9D6BD))
+            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveLastLap, value = snapshot.lastLap, tone = Color(0xFFDFB392))
+            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveTotalLaps, value = snapshot.totalLaps.toString(), tone = Color(0xFFECE4D7))
+        }
+    } else {
+        Row(
+            modifier = modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveBestLap, value = snapshot.bestLap, tone = Color(0xFFB9D6BD))
+            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveLastLap, value = snapshot.lastLap, tone = Color(0xFFDFB392))
+            SummaryStatCard(modifier = Modifier.weight(1f), label = copy.liveTotalLaps, value = snapshot.totalLaps.toString(), tone = Color(0xFFECE4D7))
+        }
+    }
+}
+
+@Composable
+private fun SummaryStatCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    tone: Color,
+) {
+    Card(
+        modifier = modifier.fillMaxSize(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = tone),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(label, fontWeight = FontWeight.Bold, color = Color(0xFF1D1B19), letterSpacing = 1.sp)
+            Text(value, fontWeight = FontWeight.Black, fontSize = 34.sp, lineHeight = 36.sp)
         }
     }
 }
@@ -932,12 +1048,13 @@ private fun MetricChip(
 private fun PrimaryAction(
     label: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2D38)),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
     ) {
         Text(label, modifier = Modifier.padding(vertical = 4.dp), textAlign = TextAlign.Center)
     }
