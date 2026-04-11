@@ -9,6 +9,7 @@ import kotlin.math.max
 class LapTimingEngine {
     private var activeTrackId: String? = null
     private var activeLapStartMillis: Long? = null
+    private var pausedAtMillis: Long? = null
     private var hasLeftStartZone = false
     private var state = LapTimingState(status = "Zum Startpunkt fahren")
 
@@ -20,6 +21,9 @@ class LapTimingEngine {
         val distanceToStart = TrackRepository.distanceToTrack(position, track)
         val now = position.elapsedRealtimeMillis
         val lapStart = activeLapStartMillis
+        if (pausedAtMillis != null) {
+            return state
+        }
 
         state = when {
             lapStart == null && distanceToStart <= START_TRIGGER_RADIUS_METERS -> {
@@ -68,6 +72,9 @@ class LapTimingEngine {
     }
 
     fun markManualLap(): LapTimingState {
+        if (pausedAtMillis != null) {
+            return state
+        }
         val lapStart = activeLapStartMillis ?: return state
         val now = android.os.SystemClock.elapsedRealtime()
         val currentLapMillis = max(0L, now - lapStart)
@@ -86,9 +93,33 @@ class LapTimingEngine {
         return state
     }
 
+    fun pause(): LapTimingState {
+        if (pausedAtMillis == null) {
+            pausedAtMillis = android.os.SystemClock.elapsedRealtime()
+            state = state.copy(status = "Pausiert")
+        }
+        return state
+    }
+
+    fun resume(): LapTimingState {
+        val pausedAt = pausedAtMillis ?: return state
+        val now = android.os.SystemClock.elapsedRealtime()
+        activeLapStartMillis = activeLapStartMillis?.plus(now - pausedAt)
+        pausedAtMillis = null
+        state = state.copy(status = "Runde laeuft")
+        return state
+    }
+
+    fun end(): LapTimingState {
+        pausedAtMillis = android.os.SystemClock.elapsedRealtime()
+        state = state.copy(status = "Session beendet")
+        return state
+    }
+
     fun reset(track: TrackPreset): LapTimingState {
         activeTrackId = track.id
         activeLapStartMillis = null
+        pausedAtMillis = null
         hasLeftStartZone = false
         state = LapTimingState(status = "Zum Startpunkt fahren")
         return state

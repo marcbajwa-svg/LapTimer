@@ -70,6 +70,12 @@ private enum class OrientationMode {
     PORTRAIT,
 }
 
+private enum class SessionMode {
+    RUNNING,
+    PAUSED,
+    ENDED,
+}
+
 private data class NativeCopy(
     val navHome: String,
     val navSetup: String,
@@ -100,6 +106,7 @@ private data class NativeCopy(
     val liveTotalLaps: String,
     val liveLapMark: String,
     val livePause: String,
+    val liveResume: String,
     val liveEnd: String,
     val gpsLabel: String,
     val gpsWaiting: String,
@@ -153,6 +160,7 @@ private val germanCopy = NativeCopy(
     liveTotalLaps = "RUNDEN",
     liveLapMark = "Lap markieren",
     livePause = "Pause",
+    liveResume = "Fortsetzen",
     liveEnd = "Ende",
     gpsLabel = "GPS",
     gpsWaiting = "GPS wartet",
@@ -206,6 +214,7 @@ private val englishCopy = NativeCopy(
     liveTotalLaps = "LAPS",
     liveLapMark = "Mark lap",
     livePause = "Pause",
+    liveResume = "Resume",
     liveEnd = "End",
     gpsLabel = "GPS",
     gpsWaiting = "Waiting for GPS",
@@ -243,6 +252,7 @@ fun LapTimerNativeApp() {
     var setupStatusMessage by remember { mutableStateOf<String?>(null) }
     val lapTimingEngine = remember { LapTimingEngine() }
     var lapTimingState by remember { mutableStateOf(LapTimingState()) }
+    var sessionMode by remember { mutableStateOf(SessionMode.RUNNING) }
 
     val copy = if (language == AppLanguage.DE) germanCopy else englishCopy
     val nearbyTrack = TrackRepository.findNearbyTrack(currentPosition)
@@ -255,7 +265,7 @@ fun LapTimerNativeApp() {
         gpsStatus = when {
             !locationPermissionGranted -> copy.gpsPermissionNeeded
             currentPosition == null -> copy.gpsWaiting
-            else -> "${TrackRepository.formatAccuracy(currentPosition)} · ${lapTimingState.status}"
+            else -> "${TrackRepository.formatAccuracy(currentPosition)} - ${lapTimingState.status}"
         },
         speedLabel = TrackRepository.formatSpeed(currentPosition),
     )
@@ -278,15 +288,18 @@ fun LapTimerNativeApp() {
 
     LaunchedEffect(selectedTrack.id) {
         lapTimingState = lapTimingEngine.reset(selectedTrack)
+        sessionMode = SessionMode.RUNNING
     }
 
-    DisposableEffect(locationPermissionGranted, selectedTrack.id) {
+    DisposableEffect(locationPermissionGranted, selectedTrack.id, sessionMode) {
         if (!locationPermissionGranted) {
             onDispose {}
         } else {
             val tracker = NativeLocationTracker(context) { position ->
                 currentPosition = position
-                lapTimingState = lapTimingEngine.update(position, selectedTrack)
+                if (sessionMode == SessionMode.RUNNING) {
+                    lapTimingState = lapTimingEngine.update(position, selectedTrack)
+                }
             }
             tracker.start()
             onDispose { tracker.stop() }
@@ -296,28 +309,32 @@ fun LapTimerNativeApp() {
     Scaffold(
         containerColor = Color(0xFFF4EFE4),
         topBar = {
-            TopControlsBar(
-                copy = copy,
-                orientationMode = orientationMode,
-                onCloseApp = { activity?.finishAffinity() },
-                onToggleLanguage = {
-                    language = if (language == AppLanguage.DE) AppLanguage.EN else AppLanguage.DE
-                },
-                onCycleOrientation = {
-                    orientationMode = when (orientationMode) {
-                        OrientationMode.AUTO -> OrientationMode.LANDSCAPE
-                        OrientationMode.LANDSCAPE -> OrientationMode.PORTRAIT
-                        OrientationMode.PORTRAIT -> OrientationMode.AUTO
-                    }
-                },
-            )
+            if (activeScreen != Screen.Live) {
+                TopControlsBar(
+                    copy = copy,
+                    orientationMode = orientationMode,
+                    onCloseApp = { activity?.finishAffinity() },
+                    onToggleLanguage = {
+                        language = if (language == AppLanguage.DE) AppLanguage.EN else AppLanguage.DE
+                    },
+                    onCycleOrientation = {
+                        orientationMode = when (orientationMode) {
+                            OrientationMode.AUTO -> OrientationMode.LANDSCAPE
+                            OrientationMode.LANDSCAPE -> OrientationMode.PORTRAIT
+                            OrientationMode.PORTRAIT -> OrientationMode.AUTO
+                        }
+                    },
+                )
+            }
         },
         bottomBar = {
-            BottomBar(
-                copy = copy,
-                activeScreen = activeScreen,
-                onSelect = { activeScreen = it },
-            )
+            if (activeScreen != Screen.Live) {
+                BottomBar(
+                    copy = copy,
+                    activeScreen = activeScreen,
+                    onSelect = { activeScreen = it },
+                )
+            }
         },
     ) { innerPadding ->
         Surface(
@@ -389,6 +406,7 @@ fun LapTimerNativeApp() {
                     copy = copy,
                     snapshot = liveSnapshot,
                     locationPermissionGranted = locationPermissionGranted,
+                    sessionMode = sessionMode,
                     onRequestLocationPermission = {
                         locationPermissionLauncher.launch(
                             arrayOf(
@@ -400,8 +418,22 @@ fun LapTimerNativeApp() {
                     onMarkLap = {
                         lapTimingState = lapTimingEngine.markManualLap()
                     },
+                    onTogglePause = {
+                        if (sessionMode == SessionMode.PAUSED) {
+                            lapTimingState = lapTimingEngine.resume()
+                            sessionMode = SessionMode.RUNNING
+                        } else if (sessionMode == SessionMode.RUNNING) {
+                            lapTimingState = lapTimingEngine.pause()
+                            sessionMode = SessionMode.PAUSED
+                        }
+                    },
+                    onEndSession = {
+                        lapTimingState = lapTimingEngine.end()
+                        sessionMode = SessionMode.ENDED
+                        activeScreen = Screen.Summary
+                    },
                 )
-                Screen.Summary -> SummaryScreen(copy = copy, selectedTrack = selectedTrack)
+                Screen.Summary -> SummaryScreen(copy = copy, selectedTrack = selectedTrack, snapshot = liveSnapshot)
             }
         }
     }
@@ -648,14 +680,17 @@ private fun LiveScreen(
     copy: NativeCopy,
     snapshot: LiveSessionSnapshot,
     locationPermissionGranted: Boolean,
+    sessionMode: SessionMode,
     onRequestLocationPermission: () -> Unit,
     onMarkLap: () -> Unit,
+    onTogglePause: () -> Unit,
+    onEndSession: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CompactHeaderCard(
@@ -694,9 +729,9 @@ private fun LiveScreen(
                     Text(
                         text = snapshot.currentLap,
                         color = Color.White,
-                        fontSize = 58.sp,
+                        fontSize = 50.sp,
                         fontWeight = FontWeight.Black,
-                        lineHeight = 62.sp,
+                        lineHeight = 54.sp,
                     )
                 }
             }
@@ -718,9 +753,9 @@ private fun LiveScreen(
                     Text(
                         text = snapshot.currentDelta,
                         color = Color(0xFF1D1B19),
-                        fontSize = 42.sp,
+                        fontSize = 36.sp,
                         fontWeight = FontWeight.Black,
-                        lineHeight = 46.sp,
+                        lineHeight = 40.sp,
                     )
                     Text("${copy.liveBestLap} ${snapshot.bestLap}", color = Color(0xFF5F5A52))
                 }
@@ -737,8 +772,12 @@ private fun LiveScreen(
             if (!locationPermissionGranted) {
                 SecondaryAction(label = copy.requestGpsPermission, onClick = onRequestLocationPermission, modifier = Modifier.weight(1f))
             }
-            SecondaryAction(label = copy.livePause, onClick = {}, modifier = Modifier.weight(1f))
-            SecondaryAction(label = copy.liveEnd, onClick = {}, modifier = Modifier.weight(1f))
+            SecondaryAction(
+                label = if (sessionMode == SessionMode.PAUSED) copy.liveResume else copy.livePause,
+                onClick = onTogglePause,
+                modifier = Modifier.weight(1f),
+            )
+            SecondaryAction(label = copy.liveEnd, onClick = onEndSession, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -747,6 +786,7 @@ private fun LiveScreen(
 private fun SummaryScreen(
     copy: NativeCopy,
     selectedTrack: TrackPreset,
+    snapshot: LiveSessionSnapshot,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -765,6 +805,15 @@ private fun SummaryScreen(
             CardBlock(title = copy.selectedTrackTitle, subtitle = copy.selectedTrackSubtitle) {
                 Text(selectedTrack.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(selectedTrack.markerLabel, color = Color(0xFF5F5A52))
+            }
+        }
+        item {
+            CardBlock(title = copy.navSummary, subtitle = snapshot.gpsStatus) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MetricChip(modifier = Modifier.weight(1f), label = copy.liveTotalLaps, value = snapshot.totalLaps.toString(), tone = Color(0xFFECE4D7))
+                    MetricChip(modifier = Modifier.weight(1f), label = copy.liveBestLap, value = snapshot.bestLap, tone = Color(0xFFB9D6BD))
+                    MetricChip(modifier = Modifier.weight(1f), label = copy.liveLastLap, value = snapshot.lastLap, tone = Color(0xFFDFB392))
+                }
             }
         }
     }
@@ -846,7 +895,7 @@ private fun CompactHeaderCard(
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9EF)),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(title, color = Color(0xFF5F5A52), fontWeight = FontWeight.Bold)
@@ -863,7 +912,7 @@ private fun MetricChip(
     tone: Color,
 ) {
     Card(
-        modifier = modifier.height(96.dp),
+        modifier = modifier.height(76.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = tone),
     ) {
@@ -874,7 +923,7 @@ private fun MetricChip(
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(label, fontWeight = FontWeight.Bold, color = Color(0xFF1D1B19))
-            Text(value, fontWeight = FontWeight.Black, fontSize = 28.sp)
+            Text(value, fontWeight = FontWeight.Black, fontSize = 24.sp)
         }
     }
 }
@@ -890,7 +939,7 @@ private fun PrimaryAction(
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2D38)),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(label, modifier = Modifier.padding(vertical = 6.dp), textAlign = TextAlign.Center)
+        Text(label, modifier = Modifier.padding(vertical = 4.dp), textAlign = TextAlign.Center)
     }
 }
 
@@ -906,7 +955,7 @@ private fun SecondaryAction(
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFECE4D7), contentColor = Color(0xFF1D1B19)),
         modifier = modifier,
     ) {
-        Text(label, modifier = Modifier.padding(vertical = 6.dp), textAlign = TextAlign.Center)
+        Text(label, modifier = Modifier.padding(vertical = 4.dp), textAlign = TextAlign.Center)
     }
 }
 
@@ -922,7 +971,7 @@ private fun AccentAction(
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC65D3B)),
         modifier = modifier,
     ) {
-        Text(label, modifier = Modifier.padding(vertical = 6.dp), textAlign = TextAlign.Center)
+        Text(label, modifier = Modifier.padding(vertical = 4.dp), textAlign = TextAlign.Center)
     }
 }
 
