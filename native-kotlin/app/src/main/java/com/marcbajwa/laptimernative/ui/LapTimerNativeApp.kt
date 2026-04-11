@@ -4,8 +4,10 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ActivityInfo
+import androidx.core.content.FileProvider
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -61,7 +63,10 @@ import com.marcbajwa.laptimernative.model.Screen
 import com.marcbajwa.laptimernative.model.TrackPreset
 import com.marcbajwa.laptimernative.sensor.LeanAngleTracker
 import com.marcbajwa.laptimernative.sensor.normalizeDegrees
+import com.marcbajwa.laptimernative.telemetry.TelemetryExporter
+import com.marcbajwa.laptimernative.telemetry.TelemetrySample
 import com.marcbajwa.laptimernative.timing.LapTimingEngine
+import java.io.File
 import kotlin.math.abs
 
 private enum class AppLanguage {
@@ -112,6 +117,14 @@ private data class NativeCopy(
     val calibrateLean: String,
     val leanCalibrated: String,
     val leanWaiting: String,
+    val telemetryOn: String,
+    val telemetryOff: String,
+    val telemetryEnabled: String,
+    val telemetryDisabled: String,
+    val telemetrySamples: String,
+    val exportTelemetry: String,
+    val telemetryExported: String,
+    val telemetryNoData: String,
     val liveBestLap: String,
     val liveLastLap: String,
     val liveTotalLaps: String,
@@ -173,6 +186,14 @@ private val germanCopy = NativeCopy(
     calibrateLean = "Schraeglage kalibrieren",
     leanCalibrated = "Schraeglage kalibriert",
     leanWaiting = "Sensor wartet",
+    telemetryOn = "Telemetrie: Ein",
+    telemetryOff = "Telemetrie: Aus",
+    telemetryEnabled = "Telemetrie-Aufzeichnung aktiviert",
+    telemetryDisabled = "Telemetrie-Aufzeichnung deaktiviert",
+    telemetrySamples = "TELEMETRIE",
+    exportTelemetry = "CSV exportieren",
+    telemetryExported = "CSV gespeichert",
+    telemetryNoData = "Noch keine Telemetrie-Daten",
     liveBestLap = "BESTE RUNDE",
     liveLastLap = "LETZTE RUNDE",
     liveTotalLaps = "RUNDEN",
@@ -234,6 +255,14 @@ private val englishCopy = NativeCopy(
     calibrateLean = "Calibrate lean",
     leanCalibrated = "Lean calibrated",
     leanWaiting = "Waiting for sensor",
+    telemetryOn = "Telemetry: On",
+    telemetryOff = "Telemetry: Off",
+    telemetryEnabled = "Telemetry recording enabled",
+    telemetryDisabled = "Telemetry recording disabled",
+    telemetrySamples = "TELEMETRY",
+    exportTelemetry = "Export CSV",
+    telemetryExported = "CSV saved",
+    telemetryNoData = "No telemetry data yet",
     liveBestLap = "BEST LAP",
     liveLastLap = "LAST LAP",
     liveTotalLaps = "LAPS",
@@ -269,6 +298,7 @@ fun LapTimerNativeApp() {
     val context = LocalContext.current
     val activity = context.findActivity()
     val store = remember { LocalLapTimerStore(context.applicationContext) }
+    val telemetryExporter = remember { TelemetryExporter(context.applicationContext) }
     val storedManualTrack = remember { store.loadManualTrack() }
     var activeScreen by remember { mutableStateOf(Screen.Home) }
     var selectedTrack by remember { mutableStateOf(storedManualTrack ?: TrackRepository.nearbySuggestion) }
@@ -286,6 +316,9 @@ fun LapTimerNativeApp() {
     var currentLeanDegrees by remember { mutableStateOf<Float?>(null) }
     var maxLeftLeanDegrees by remember { mutableStateOf(0f) }
     var maxRightLeanDegrees by remember { mutableStateOf(0f) }
+    var telemetryEnabled by remember { mutableStateOf(true) }
+    var telemetrySamples by remember { mutableStateOf<List<TelemetrySample>>(emptyList()) }
+    var lastTelemetryExportFile by remember { mutableStateOf<File?>(null) }
 
     val copy = if (language == AppLanguage.DE) germanCopy else englishCopy
     val nearbyTrack = TrackRepository.findNearbyTrack(currentPosition)
@@ -305,6 +338,7 @@ fun LapTimerNativeApp() {
         leanLeftLabel = maxLeftLeanDegrees.formatLean(),
         leanRightLabel = maxRightLeanDegrees.formatLean(),
     )
+    val telemetryStatusLabel = "${telemetrySamples.size} samples"
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { permissions ->
@@ -331,6 +365,8 @@ fun LapTimerNativeApp() {
         sessionMode = SessionMode.RUNNING
         maxLeftLeanDegrees = 0f
         maxRightLeanDegrees = 0f
+        telemetrySamples = emptyList()
+        lastTelemetryExportFile = null
     }
 
     DisposableEffect(Unit) {
@@ -365,6 +401,17 @@ fun LapTimerNativeApp() {
                         updatedState.bestLapMillis?.let { bestLapMillis ->
                             store.saveBestLapMillis(selectedTrack.id, bestLapMillis)
                         }
+                    }
+                    if (telemetryEnabled) {
+                        telemetrySamples = telemetrySamples + TelemetrySample(
+                            timestampMillis = System.currentTimeMillis(),
+                            latitude = position.latitude,
+                            longitude = position.longitude,
+                            speedKmh = position.speedKmh,
+                            gpsAccuracyMeters = position.accuracyMeters,
+                            leanDegrees = currentLeanDegrees,
+                            lapIndex = lapTimingState.totalLaps,
+                        )
                     }
                 }
             }
@@ -424,6 +471,7 @@ fun LapTimerNativeApp() {
                     selectedTrack = selectedTrack,
                     locationPermissionGranted = locationPermissionGranted,
                     locationStatus = liveSnapshot.gpsStatus,
+                    telemetryEnabled = telemetryEnabled,
                     onRequestLocationPermission = {
                         locationPermissionLauncher.launch(
                             arrayOf(
@@ -483,6 +531,14 @@ fun LapTimerNativeApp() {
                             setupStatusMessage = copy.leanCalibrated
                         }
                     },
+                    onToggleTelemetry = {
+                        telemetryEnabled = !telemetryEnabled
+                        setupStatusMessage = if (!telemetryEnabled) {
+                            copy.telemetryEnabled
+                        } else {
+                            copy.telemetryDisabled
+                        }
+                    },
                     setupStatusMessage = setupStatusMessage,
                     onSelectTrack = { selectedTrack = it },
                     onGoLive = { activeScreen = Screen.Live },
@@ -519,6 +575,7 @@ fun LapTimerNativeApp() {
                     onEndSession = {
                         val endedState = lapTimingEngine.end()
                         lapTimingState = endedState
+                        lastTelemetryExportFile = telemetryExporter.exportCsv(selectedTrack, telemetrySamples)
                         store.saveLastSession(
                             track = selectedTrack,
                             totalLaps = endedState.totalLaps,
@@ -535,8 +592,18 @@ fun LapTimerNativeApp() {
                     copy = copy,
                     selectedTrack = selectedTrack,
                     snapshot = liveSnapshot,
+                    telemetryStatus = telemetryStatusLabel,
+                    lastTelemetryExportFile = lastTelemetryExportFile,
                     onGoSetup = { activeScreen = Screen.Setup },
                     onGoLive = { activeScreen = Screen.Live },
+                    onExportTelemetry = {
+                        val exportFile = lastTelemetryExportFile
+                            ?: telemetryExporter.exportCsv(selectedTrack, telemetrySamples)
+                        if (exportFile != null) {
+                            lastTelemetryExportFile = exportFile
+                            context.shareTelemetryCsv(exportFile)
+                        }
+                    },
                 )
             }
         }
@@ -632,9 +699,11 @@ private fun SetupScreen(
     selectedTrack: TrackPreset,
     locationPermissionGranted: Boolean,
     locationStatus: String,
+    telemetryEnabled: Boolean,
     onRequestLocationPermission: () -> Unit,
     onSetManualStartPoint: () -> Unit,
     onCalibrateLean: () -> Unit,
+    onToggleTelemetry: () -> Unit,
     setupStatusMessage: String?,
     onSelectTrack: (TrackPreset) -> Unit,
     onGoLive: () -> Unit,
@@ -674,6 +743,10 @@ private fun SetupScreen(
                     }
                     SecondaryAction(label = copy.setManualStartPoint, onClick = onSetManualStartPoint)
                     SecondaryAction(label = copy.calibrateLean, onClick = onCalibrateLean)
+                    SecondaryAction(
+                        label = if (telemetryEnabled) copy.telemetryOn else copy.telemetryOff,
+                        onClick = onToggleTelemetry,
+                    )
                     if (setupStatusMessage != null) {
                         Text(setupStatusMessage, color = Color(0xFF345F49), fontWeight = FontWeight.Bold)
                     }
@@ -898,8 +971,11 @@ private fun SummaryScreen(
     copy: NativeCopy,
     selectedTrack: TrackPreset,
     snapshot: LiveSessionSnapshot,
+    telemetryStatus: String,
+    lastTelemetryExportFile: File?,
     onGoSetup: () -> Unit,
     onGoLive: () -> Unit,
+    onExportTelemetry: () -> Unit,
 ) {
     BoxWithConstraints(
         modifier = Modifier
@@ -917,8 +993,11 @@ private fun SummaryScreen(
                     copy = copy,
                     selectedTrack = selectedTrack,
                     snapshot = snapshot,
+                    telemetryStatus = telemetryStatus,
+                    lastTelemetryExportFile = lastTelemetryExportFile,
                     onGoSetup = onGoSetup,
                     onGoLive = onGoLive,
+                    onExportTelemetry = onExportTelemetry,
                 )
                 SummaryStatsGrid(
                     modifier = Modifier.weight(1.2f),
@@ -937,8 +1016,11 @@ private fun SummaryScreen(
                     copy = copy,
                     selectedTrack = selectedTrack,
                     snapshot = snapshot,
+                    telemetryStatus = telemetryStatus,
+                    lastTelemetryExportFile = lastTelemetryExportFile,
                     onGoSetup = onGoSetup,
                     onGoLive = onGoLive,
+                    onExportTelemetry = onExportTelemetry,
                 )
                 SummaryStatsGrid(
                     modifier = Modifier.weight(1.1f),
@@ -957,8 +1039,11 @@ private fun SummaryHeaderCard(
     copy: NativeCopy,
     selectedTrack: TrackPreset,
     snapshot: LiveSessionSnapshot,
+    telemetryStatus: String,
+    lastTelemetryExportFile: File?,
     onGoSetup: () -> Unit,
     onGoLive: () -> Unit,
+    onExportTelemetry: () -> Unit,
 ) {
     Card(
         modifier = modifier.fillMaxSize(),
@@ -977,10 +1062,15 @@ private fun SummaryHeaderCard(
                 Text(selectedTrack.name, color = Color(0xFF5F5A52), fontWeight = FontWeight.Bold)
                 Text(selectedTrack.markerLabel, color = Color(0xFF5F5A52), fontSize = 13.sp, lineHeight = 16.sp)
                 Text(snapshot.gpsStatus, color = Color(0xFF345F49), fontSize = 13.sp, lineHeight = 16.sp)
+                Text("${copy.telemetrySamples}: $telemetryStatus", color = Color(0xFF5F5A52), fontSize = 13.sp, lineHeight = 16.sp)
+                if (lastTelemetryExportFile != null) {
+                    Text(copy.telemetryExported, color = Color(0xFF345F49), fontSize = 13.sp, lineHeight = 16.sp)
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SecondaryAction(label = copy.navSetup, onClick = onGoSetup, modifier = Modifier.weight(1f))
                 PrimaryAction(label = copy.navLive, onClick = onGoLive, modifier = Modifier.weight(1f))
+                SecondaryAction(label = copy.exportTelemetry, onClick = onExportTelemetry, modifier = Modifier.weight(1f))
             }
         }
     }
@@ -1223,6 +1313,16 @@ private fun Context.findActivity(): Activity? {
 private fun Context.hasLocationPermission(): Boolean {
     return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
         checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun Context.shareTelemetryCsv(file: File) {
+    val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/csv"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    startActivity(Intent.createChooser(shareIntent, "Telemetry CSV exportieren"))
 }
 
 private fun CurrentPosition.formatCoordinates(): String {
