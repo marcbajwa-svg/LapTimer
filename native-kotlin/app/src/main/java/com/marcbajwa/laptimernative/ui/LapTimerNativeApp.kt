@@ -1,9 +1,13 @@
 package com.marcbajwa.laptimernative.ui
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.pm.PackageManager
 import android.content.pm.ActivityInfo
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +51,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.marcbajwa.laptimernative.data.TrackRepository
+import com.marcbajwa.laptimernative.location.NativeLocationTracker
+import com.marcbajwa.laptimernative.model.CurrentPosition
 import com.marcbajwa.laptimernative.model.LiveSessionSnapshot
 import com.marcbajwa.laptimernative.model.Screen
 import com.marcbajwa.laptimernative.model.TrackPreset
@@ -85,6 +92,7 @@ private data class NativeCopy(
     val goToLiveCockpit: String,
     val liveCurrentLap: String,
     val liveDelta: String,
+    val liveSpeed: String,
     val liveBestLap: String,
     val liveLastLap: String,
     val liveTotalLaps: String,
@@ -92,6 +100,10 @@ private data class NativeCopy(
     val livePause: String,
     val liveEnd: String,
     val gpsLabel: String,
+    val gpsWaiting: String,
+    val gpsPermissionNeeded: String,
+    val requestGpsPermission: String,
+    val noNearbyTrack: String,
     val summaryEyebrow: String,
     val summaryTitle: String,
     val summarySubtitle: String,
@@ -128,6 +140,7 @@ private val germanCopy = NativeCopy(
     goToLiveCockpit = "Zum Live-Cockpit",
     liveCurrentLap = "AKTUELLE RUNDE",
     liveDelta = "DELTA ZUR BESTZEIT",
+    liveSpeed = "GESCHWINDIGKEIT",
     liveBestLap = "BESTE RUNDE",
     liveLastLap = "LETZTE RUNDE",
     liveTotalLaps = "RUNDEN",
@@ -135,6 +148,10 @@ private val germanCopy = NativeCopy(
     livePause = "Pause",
     liveEnd = "Ende",
     gpsLabel = "GPS",
+    gpsWaiting = "GPS wartet",
+    gpsPermissionNeeded = "Standortfreigabe fehlt",
+    requestGpsPermission = "GPS freigeben",
+    noNearbyTrack = "Keine bekannte Strecke in der Naehe",
     summaryEyebrow = "Session-Auswertung",
     summaryTitle = "Die native Auswertung bleibt schnell lesbar",
     summarySubtitle = "Dieser Screen wird das Kotlin-Zuhause fuer Runden, Referenz-Qualitaet und Export-Aktionen.",
@@ -171,6 +188,7 @@ private val englishCopy = NativeCopy(
     goToLiveCockpit = "Go to live cockpit",
     liveCurrentLap = "CURRENT LAP",
     liveDelta = "DELTA TO BEST",
+    liveSpeed = "SPEED",
     liveBestLap = "BEST LAP",
     liveLastLap = "LAST LAP",
     liveTotalLaps = "LAPS",
@@ -178,6 +196,10 @@ private val englishCopy = NativeCopy(
     livePause = "Pause",
     liveEnd = "End",
     gpsLabel = "GPS",
+    gpsWaiting = "Waiting for GPS",
+    gpsPermissionNeeded = "Location permission needed",
+    requestGpsPermission = "Allow GPS",
+    noNearbyTrack = "No known track nearby",
     summaryEyebrow = "Session Summary",
     summaryTitle = "Native summary will stay quick to scan",
     summarySubtitle = "This screen becomes the Kotlin home for laps, reference run health, and export actions.",
@@ -198,14 +220,45 @@ fun LapTimerNativeApp() {
     var selectedTrack by remember { mutableStateOf(TrackRepository.nearbySuggestion) }
     var language by remember { mutableStateOf(AppLanguage.DE) }
     var orientationMode by remember { mutableStateOf(OrientationMode.LANDSCAPE) }
+    var currentPosition by remember { mutableStateOf<CurrentPosition?>(null) }
+    var locationPermissionGranted by remember { mutableStateOf(context.hasLocationPermission()) }
 
     val copy = if (language == AppLanguage.DE) germanCopy else englishCopy
+    val nearbyTrack = TrackRepository.findNearbyTrack(currentPosition) ?: TrackRepository.nearbySuggestion
+    val liveSnapshot = TrackRepository.liveSnapshot.copy(
+        gpsStatus = when {
+            !locationPermissionGranted -> copy.gpsPermissionNeeded
+            currentPosition == null -> copy.gpsWaiting
+            else -> TrackRepository.formatAccuracy(currentPosition)
+        },
+        speedLabel = TrackRepository.formatSpeed(currentPosition),
+    )
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { permissions ->
+        locationPermissionGranted =
+            permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true ||
+            context.hasLocationPermission()
+    }
 
     LaunchedEffect(orientationMode) {
         context.findActivity()?.requestedOrientation = when (orientationMode) {
             OrientationMode.AUTO -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
             OrientationMode.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             OrientationMode.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        }
+    }
+
+    DisposableEffect(locationPermissionGranted) {
+        if (!locationPermissionGranted) {
+            onDispose {}
+        } else {
+            val tracker = NativeLocationTracker(context) { position ->
+                currentPosition = position
+            }
+            tracker.start()
+            onDispose { tracker.stop() }
         }
     }
 
@@ -250,13 +303,34 @@ fun LapTimerNativeApp() {
                 )
                 Screen.Setup -> SetupScreen(
                     copy = copy,
-                    nearbyTrack = TrackRepository.nearbySuggestion,
+                    nearbyTrack = nearbyTrack,
                     presets = TrackRepository.presets,
                     selectedTrack = selectedTrack,
+                    locationPermissionGranted = locationPermissionGranted,
+                    onRequestLocationPermission = {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                            ),
+                        )
+                    },
                     onSelectTrack = { selectedTrack = it },
                     onGoLive = { activeScreen = Screen.Live },
                 )
-                Screen.Live -> LiveScreen(copy = copy, snapshot = TrackRepository.liveSnapshot)
+                Screen.Live -> LiveScreen(
+                    copy = copy,
+                    snapshot = liveSnapshot,
+                    locationPermissionGranted = locationPermissionGranted,
+                    onRequestLocationPermission = {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                            ),
+                        )
+                    },
+                )
                 Screen.Summary -> SummaryScreen(copy = copy, selectedTrack = selectedTrack)
             }
         }
@@ -349,6 +423,8 @@ private fun SetupScreen(
     nearbyTrack: TrackPreset,
     presets: List<TrackPreset>,
     selectedTrack: TrackPreset,
+    locationPermissionGranted: Boolean,
+    onRequestLocationPermission: () -> Unit,
     onSelectTrack: (TrackPreset) -> Unit,
     onGoLive: () -> Unit,
 ) {
@@ -371,6 +447,9 @@ private fun SetupScreen(
                     Text(nearbyTrack.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text(nearbyTrack.markerLabel, color = Color(0xFF5F5A52))
                     Text(nearbyTrack.distanceLabel ?: "--", color = Color(0xFF345F49), fontWeight = FontWeight.Bold)
+                    if (!locationPermissionGranted) {
+                        SecondaryAction(label = copy.requestGpsPermission, onClick = onRequestLocationPermission)
+                    }
                     PrimaryAction(label = copy.useSuggestedTrack, onClick = { onSelectTrack(nearbyTrack) })
                     SecondaryAction(label = copy.setManualStartPoint, onClick = {})
                 }
@@ -474,6 +553,8 @@ private fun BottomBarButton(
 private fun LiveScreen(
     copy: NativeCopy,
     snapshot: LiveSessionSnapshot,
+    locationPermissionGranted: Boolean,
+    onRequestLocationPermission: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -486,6 +567,11 @@ private fun LiveScreen(
                 modifier = Modifier.weight(1f),
                 title = copy.gpsLabel,
                 value = snapshot.gpsStatus,
+            )
+            CompactHeaderCard(
+                modifier = Modifier.weight(1f),
+                title = copy.liveSpeed,
+                value = snapshot.speedLabel,
             )
             CompactHeaderCard(
                 modifier = Modifier.weight(1f),
@@ -553,6 +639,9 @@ private fun LiveScreen(
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             AccentAction(label = copy.liveLapMark, modifier = Modifier.weight(1f))
+            if (!locationPermissionGranted) {
+                SecondaryAction(label = copy.requestGpsPermission, onClick = onRequestLocationPermission, modifier = Modifier.weight(1f))
+            }
             SecondaryAction(label = copy.livePause, onClick = {}, modifier = Modifier.weight(1f))
             SecondaryAction(label = copy.liveEnd, onClick = {}, modifier = Modifier.weight(1f))
         }
@@ -750,4 +839,9 @@ private fun Context.findActivity(): Activity? {
         currentContext = currentContext.baseContext
     }
     return null
+}
+
+private fun Context.hasLocationPermission(): Boolean {
+    return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 }

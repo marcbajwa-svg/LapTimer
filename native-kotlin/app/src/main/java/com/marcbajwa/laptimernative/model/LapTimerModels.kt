@@ -13,7 +13,17 @@ data class TrackPreset(
     val country: String,
     val markerLabel: String,
     val minimumLapSeconds: Int,
+    val latitude: Double,
+    val longitude: Double,
+    val suggestionRadiusMeters: Int,
     val distanceLabel: String? = null,
+)
+
+data class CurrentPosition(
+    val latitude: Double,
+    val longitude: Double,
+    val accuracyMeters: Float?,
+    val speedKmh: Float?,
 )
 
 data class LiveSessionSnapshot(
@@ -23,4 +33,5 @@ data class LiveSessionSnapshot(
     val bestLap: String,
     val totalLaps: Int,
     val gpsStatus: String,
+    val speedLabel: String,
 )
