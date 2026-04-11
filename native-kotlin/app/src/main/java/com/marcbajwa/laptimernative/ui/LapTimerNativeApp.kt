@@ -743,8 +743,9 @@ private fun SetupScreen(
                     }
                     SecondaryAction(label = copy.setManualStartPoint, onClick = onSetManualStartPoint)
                     SecondaryAction(label = copy.calibrateLean, onClick = onCalibrateLean)
-                    SecondaryAction(
+                    TelemetryToggleAction(
                         label = if (telemetryEnabled) copy.telemetryOn else copy.telemetryOff,
+                        enabled = telemetryEnabled,
                         onClick = onToggleTelemetry,
                     )
                     if (setupStatusMessage != null) {
@@ -1277,6 +1278,29 @@ private fun SecondaryAction(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFECE4D7), contentColor = Color(0xFF1D1B19)),
+        modifier = modifier,
+    ) {
+        Text(label, modifier = Modifier.padding(vertical = 4.dp), textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun TelemetryToggleAction(
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val containerColor = if (enabled) Color(0xFF345F49) else Color(0xFFECE4D7)
+    val contentColor = if (enabled) Color(0xFFFFF9EF) else Color(0xFF1D1B19)
+
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        ),
         modifier = modifier,
     ) {
         Text(label, modifier = Modifier.padding(vertical = 4.dp), textAlign = TextAlign.Center)
