@@ -116,6 +116,7 @@ private data class NativeCopy(
     val noNearbyTrack: String,
     val manualStartReady: String,
     val manualStartWaiting: String,
+    val manualStartNeedsBetterGps: String,
     val manualTrackName: String,
     val manualTrackCountry: String,
     val manualTrackMarker: String,
@@ -170,6 +171,7 @@ private val germanCopy = NativeCopy(
     noNearbyTrack = "Keine bekannte Strecke in der Naehe",
     manualStartReady = "Manueller Startpunkt gesetzt",
     manualStartWaiting = "Warte noch auf einen GPS-Fix fuer den manuellen Startpunkt",
+    manualStartNeedsBetterGps = "GPS ist noch zu ungenau fuer den Startpunkt",
     manualTrackName = "Eigener Startpunkt",
     manualTrackCountry = "Eigene Strecke",
     manualTrackMarker = "Manuell gesetzte Start-/Ziellinie",
@@ -224,6 +226,7 @@ private val englishCopy = NativeCopy(
     noNearbyTrack = "No known track nearby",
     manualStartReady = "Manual start point saved",
     manualStartWaiting = "Waiting for a GPS fix before setting the manual start point",
+    manualStartNeedsBetterGps = "GPS is not accurate enough for the start point yet",
     manualTrackName = "Custom start point",
     manualTrackCountry = "Custom track",
     manualTrackMarker = "Manually saved start / finish line",
@@ -380,6 +383,9 @@ fun LapTimerNativeApp() {
                             }
                             currentPosition == null -> {
                                 setupStatusMessage = copy.manualStartWaiting
+                            }
+                            !requireNotNull(currentPosition).hasManualStartAccuracy() -> {
+                                setupStatusMessage = copy.manualStartNeedsBetterGps
                             }
                             else -> {
                                 val position = requireNotNull(currentPosition)
@@ -1110,6 +1116,11 @@ private fun Context.hasLocationPermission(): Boolean {
 
 private fun CurrentPosition.formatCoordinates(): String {
     return String.format(java.util.Locale.US, "%.5f, %.5f", latitude, longitude)
+}
+
+private fun CurrentPosition.hasManualStartAccuracy(): Boolean {
+    val accuracy = accuracyMeters ?: return false
+    return accuracy <= 20f
 }
 
 private fun Long?.formatLapTime(): String {

@@ -25,6 +25,13 @@ class LapTimingEngine {
             return state
         }
 
+        if (!position.hasTimingAccuracy()) {
+            return state.copy(
+                currentLapMillis = lapStart?.let { max(0L, now - it) } ?: state.currentLapMillis,
+                status = "GPS zu ungenau",
+            ).also { state = it }
+        }
+
         state = when {
             lapStart == null && distanceToStart <= START_TRIGGER_RADIUS_METERS -> {
                 activeLapStartMillis = now
@@ -43,6 +50,7 @@ class LapTimingEngine {
                 if (
                     hasLeftStartZone &&
                     distanceToStart <= START_TRIGGER_RADIUS_METERS &&
+                    position.hasLapFinishSpeed() &&
                     currentLapMillis >= track.minimumLapSeconds * 1_000L
                 ) {
                     val bestLapMillis = state.bestLapMillis
@@ -62,7 +70,11 @@ class LapTimingEngine {
                     state.copy(
                         currentLapMillis = currentLapMillis,
                         currentDeltaMillis = bestLapMillis?.let { currentLapMillis - it },
-                        status = if (hasLeftStartZone) "Zielzone scharf" else "Raus aus der Startzone",
+                        status = when {
+                            hasLeftStartZone && !position.hasLapFinishSpeed() -> "Zielzone scharf - Tempo fehlt"
+                            hasLeftStartZone -> "Zielzone scharf"
+                            else -> "Raus aus der Startzone"
+                        },
                     )
                 }
             }
@@ -129,4 +141,14 @@ class LapTimingEngine {
         private const val START_TRIGGER_RADIUS_METERS = 25.0
         private const val REARM_RADIUS_METERS = 60.0
     }
+}
+
+private fun CurrentPosition.hasTimingAccuracy(): Boolean {
+    val accuracy = accuracyMeters ?: return false
+    return accuracy <= 35f
+}
+
+private fun CurrentPosition.hasLapFinishSpeed(): Boolean {
+    val speed = speedKmh ?: return false
+    return speed >= 12f
 }
