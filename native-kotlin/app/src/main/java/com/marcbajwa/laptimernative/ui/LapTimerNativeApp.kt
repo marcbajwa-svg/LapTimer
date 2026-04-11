@@ -104,6 +104,11 @@ private data class NativeCopy(
     val gpsPermissionNeeded: String,
     val requestGpsPermission: String,
     val noNearbyTrack: String,
+    val manualStartReady: String,
+    val manualStartWaiting: String,
+    val manualTrackName: String,
+    val manualTrackCountry: String,
+    val manualTrackMarker: String,
     val summaryEyebrow: String,
     val summaryTitle: String,
     val summarySubtitle: String,
@@ -152,6 +157,11 @@ private val germanCopy = NativeCopy(
     gpsPermissionNeeded = "Standortfreigabe fehlt",
     requestGpsPermission = "GPS freigeben",
     noNearbyTrack = "Keine bekannte Strecke in der Naehe",
+    manualStartReady = "Manueller Startpunkt gesetzt",
+    manualStartWaiting = "Warte noch auf einen GPS-Fix fuer den manuellen Startpunkt",
+    manualTrackName = "Eigener Startpunkt",
+    manualTrackCountry = "Eigene Strecke",
+    manualTrackMarker = "Manuell gesetzte Start-/Ziellinie",
     summaryEyebrow = "Session-Auswertung",
     summaryTitle = "Die native Auswertung bleibt schnell lesbar",
     summarySubtitle = "Dieser Screen wird das Kotlin-Zuhause fuer Runden, Referenz-Qualitaet und Export-Aktionen.",
@@ -200,6 +210,11 @@ private val englishCopy = NativeCopy(
     gpsPermissionNeeded = "Location permission needed",
     requestGpsPermission = "Allow GPS",
     noNearbyTrack = "No known track nearby",
+    manualStartReady = "Manual start point saved",
+    manualStartWaiting = "Waiting for a GPS fix before setting the manual start point",
+    manualTrackName = "Custom start point",
+    manualTrackCountry = "Custom track",
+    manualTrackMarker = "Manually saved start / finish line",
     summaryEyebrow = "Session Summary",
     summaryTitle = "Native summary will stay quick to scan",
     summarySubtitle = "This screen becomes the Kotlin home for laps, reference run health, and export actions.",
@@ -222,6 +237,8 @@ fun LapTimerNativeApp() {
     var orientationMode by remember { mutableStateOf(OrientationMode.LANDSCAPE) }
     var currentPosition by remember { mutableStateOf<CurrentPosition?>(null) }
     var locationPermissionGranted by remember { mutableStateOf(context.hasLocationPermission()) }
+    var manualTrack by remember { mutableStateOf<TrackPreset?>(null) }
+    var setupStatusMessage by remember { mutableStateOf<String?>(null) }
 
     val copy = if (language == AppLanguage.DE) germanCopy else englishCopy
     val nearbyTrack = TrackRepository.findNearbyTrack(currentPosition)
@@ -305,6 +322,7 @@ fun LapTimerNativeApp() {
                     copy = copy,
                     nearbyTrack = nearbyTrack,
                     presets = TrackRepository.presets,
+                    manualTrack = manualTrack,
                     selectedTrack = selectedTrack,
                     locationPermissionGranted = locationPermissionGranted,
                     locationStatus = liveSnapshot.gpsStatus,
@@ -316,6 +334,40 @@ fun LapTimerNativeApp() {
                             ),
                         )
                     },
+                    onSetManualStartPoint = {
+                        when {
+                            !locationPermissionGranted -> {
+                                setupStatusMessage = copy.gpsPermissionNeeded
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    ),
+                                )
+                            }
+                            currentPosition == null -> {
+                                setupStatusMessage = copy.manualStartWaiting
+                            }
+                            else -> {
+                                val position = requireNotNull(currentPosition)
+                                val track = TrackPreset(
+                                    id = "manual-start",
+                                    name = copy.manualTrackName,
+                                    country = copy.manualTrackCountry,
+                                    markerLabel = "${copy.manualTrackMarker} (${position.formatCoordinates()})",
+                                    minimumLapSeconds = 10,
+                                    latitude = position.latitude,
+                                    longitude = position.longitude,
+                                    suggestionRadiusMeters = 100,
+                                    distanceLabel = TrackRepository.formatAccuracy(position),
+                                )
+                                manualTrack = track
+                                selectedTrack = track
+                                setupStatusMessage = copy.manualStartReady
+                            }
+                        }
+                    },
+                    setupStatusMessage = setupStatusMessage,
                     onSelectTrack = { selectedTrack = it },
                     onGoLive = { activeScreen = Screen.Live },
                 )
@@ -423,10 +475,13 @@ private fun SetupScreen(
     copy: NativeCopy,
     nearbyTrack: TrackPreset?,
     presets: List<TrackPreset>,
+    manualTrack: TrackPreset?,
     selectedTrack: TrackPreset,
     locationPermissionGranted: Boolean,
     locationStatus: String,
     onRequestLocationPermission: () -> Unit,
+    onSetManualStartPoint: () -> Unit,
+    setupStatusMessage: String?,
     onSelectTrack: (TrackPreset) -> Unit,
     onGoLive: () -> Unit,
 ) {
@@ -463,13 +518,23 @@ private fun SetupScreen(
                     if (nearbyTrack != null) {
                         PrimaryAction(label = copy.useSuggestedTrack, onClick = { onSelectTrack(nearbyTrack) })
                     }
-                    SecondaryAction(label = copy.setManualStartPoint, onClick = {})
+                    SecondaryAction(label = copy.setManualStartPoint, onClick = onSetManualStartPoint)
+                    if (setupStatusMessage != null) {
+                        Text(setupStatusMessage, color = Color(0xFF345F49), fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
         item {
             CardBlock(title = copy.trackLibraryTitle, subtitle = copy.trackLibrarySubtitle) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (manualTrack != null) {
+                        SelectableTrackCard(
+                            track = manualTrack,
+                            selected = manualTrack.id == selectedTrack.id,
+                            onSelect = { onSelectTrack(manualTrack) },
+                        )
+                    }
                     presets.forEach { preset ->
                         SelectableTrackCard(
                             track = preset,
@@ -856,4 +921,8 @@ private fun Context.findActivity(): Activity? {
 private fun Context.hasLocationPermission(): Boolean {
     return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
         checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun CurrentPosition.formatCoordinates(): String {
+    return String.format(java.util.Locale.US, "%.5f, %.5f", latitude, longitude)
 }
