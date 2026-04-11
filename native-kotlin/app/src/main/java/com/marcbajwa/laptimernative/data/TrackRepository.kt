@@ -77,6 +77,10 @@ object TrackRepository {
         return "Genauigkeit ${accuracy.roundToInt()} m"
     }
 
+    fun distanceToTrack(position: CurrentPosition, track: TrackPreset): Double {
+        return distanceMeters(position.latitude, position.longitude, track.latitude, track.longitude)
+    }
+
     private fun formatDistance(distanceMeters: Double): String {
         return if (distanceMeters >= 1_000) {
             "${(distanceMeters / 100.0).roundToInt() / 10.0} km away"

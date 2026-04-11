@@ -53,9 +53,11 @@ import androidx.compose.ui.unit.sp
 import com.marcbajwa.laptimernative.data.TrackRepository
 import com.marcbajwa.laptimernative.location.NativeLocationTracker
 import com.marcbajwa.laptimernative.model.CurrentPosition
+import com.marcbajwa.laptimernative.model.LapTimingState
 import com.marcbajwa.laptimernative.model.LiveSessionSnapshot
 import com.marcbajwa.laptimernative.model.Screen
 import com.marcbajwa.laptimernative.model.TrackPreset
+import com.marcbajwa.laptimernative.timing.LapTimingEngine
 
 private enum class AppLanguage {
     DE,
@@ -239,14 +241,21 @@ fun LapTimerNativeApp() {
     var locationPermissionGranted by remember { mutableStateOf(context.hasLocationPermission()) }
     var manualTrack by remember { mutableStateOf<TrackPreset?>(null) }
     var setupStatusMessage by remember { mutableStateOf<String?>(null) }
+    val lapTimingEngine = remember { LapTimingEngine() }
+    var lapTimingState by remember { mutableStateOf(LapTimingState()) }
 
     val copy = if (language == AppLanguage.DE) germanCopy else englishCopy
     val nearbyTrack = TrackRepository.findNearbyTrack(currentPosition)
     val liveSnapshot = TrackRepository.liveSnapshot.copy(
+        currentLap = lapTimingState.currentLapMillis.formatLapTime(),
+        currentDelta = lapTimingState.currentDeltaMillis.formatDelta(),
+        lastLap = lapTimingState.lastLapMillis.formatLapTime(),
+        bestLap = lapTimingState.bestLapMillis.formatLapTime(),
+        totalLaps = lapTimingState.totalLaps,
         gpsStatus = when {
             !locationPermissionGranted -> copy.gpsPermissionNeeded
             currentPosition == null -> copy.gpsWaiting
-            else -> TrackRepository.formatAccuracy(currentPosition)
+            else -> "${TrackRepository.formatAccuracy(currentPosition)} · ${lapTimingState.status}"
         },
         speedLabel = TrackRepository.formatSpeed(currentPosition),
     )
@@ -267,12 +276,17 @@ fun LapTimerNativeApp() {
         }
     }
 
-    DisposableEffect(locationPermissionGranted) {
+    LaunchedEffect(selectedTrack.id) {
+        lapTimingState = lapTimingEngine.reset(selectedTrack)
+    }
+
+    DisposableEffect(locationPermissionGranted, selectedTrack.id) {
         if (!locationPermissionGranted) {
             onDispose {}
         } else {
             val tracker = NativeLocationTracker(context) { position ->
                 currentPosition = position
+                lapTimingState = lapTimingEngine.update(position, selectedTrack)
             }
             tracker.start()
             onDispose { tracker.stop() }
@@ -382,6 +396,9 @@ fun LapTimerNativeApp() {
                                 Manifest.permission.ACCESS_COARSE_LOCATION,
                             ),
                         )
+                    },
+                    onMarkLap = {
+                        lapTimingState = lapTimingEngine.markManualLap()
                     },
                 )
                 Screen.Summary -> SummaryScreen(copy = copy, selectedTrack = selectedTrack)
@@ -632,6 +649,7 @@ private fun LiveScreen(
     snapshot: LiveSessionSnapshot,
     locationPermissionGranted: Boolean,
     onRequestLocationPermission: () -> Unit,
+    onMarkLap: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -715,7 +733,7 @@ private fun LiveScreen(
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            AccentAction(label = copy.liveLapMark, modifier = Modifier.weight(1f))
+            AccentAction(label = copy.liveLapMark, onClick = onMarkLap, modifier = Modifier.weight(1f))
             if (!locationPermissionGranted) {
                 SecondaryAction(label = copy.requestGpsPermission, onClick = onRequestLocationPermission, modifier = Modifier.weight(1f))
             }
@@ -895,10 +913,11 @@ private fun SecondaryAction(
 @Composable
 private fun AccentAction(
     label: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Button(
-        onClick = {},
+        onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC65D3B)),
         modifier = modifier,
@@ -925,4 +944,26 @@ private fun Context.hasLocationPermission(): Boolean {
 
 private fun CurrentPosition.formatCoordinates(): String {
     return String.format(java.util.Locale.US, "%.5f, %.5f", latitude, longitude)
+}
+
+private fun Long?.formatLapTime(): String {
+    if (this == null) {
+        return "--:--.--"
+    }
+
+    val totalCentiseconds = this / 10L
+    val minutes = totalCentiseconds / 6_000L
+    val seconds = (totalCentiseconds % 6_000L) / 100L
+    val centiseconds = totalCentiseconds % 100L
+    return String.format(java.util.Locale.US, "%02d:%02d.%02d", minutes, seconds, centiseconds)
+}
+
+private fun Long?.formatDelta(): String {
+    if (this == null) {
+        return "--:--.--"
+    }
+
+    val sign = if (this >= 0L) "+" else "-"
+    val absoluteMillis = kotlin.math.abs(this)
+    return "$sign${absoluteMillis.formatLapTime()}"
 }

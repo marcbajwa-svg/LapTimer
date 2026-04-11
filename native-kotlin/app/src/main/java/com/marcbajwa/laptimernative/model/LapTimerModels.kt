@@ -24,6 +24,7 @@ data class CurrentPosition(
     val longitude: Double,
     val accuracyMeters: Float?,
     val speedKmh: Float?,
+    val elapsedRealtimeMillis: Long,
 )
 
 data class LiveSessionSnapshot(
@@ -34,4 +35,13 @@ data class LiveSessionSnapshot(
     val totalLaps: Int,
     val gpsStatus: String,
     val speedLabel: String,
+)
+
+data class LapTimingState(
+    val currentLapMillis: Long = 0L,
+    val currentDeltaMillis: Long? = null,
+    val lastLapMillis: Long? = null,
+    val bestLapMillis: Long? = null,
+    val totalLaps: Int = 0,
+    val status: String = "Bereit",
 )

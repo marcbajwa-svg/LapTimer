@@ -5,6 +5,7 @@ import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.SystemClock
 import com.marcbajwa.laptimernative.model.CurrentPosition
 
 class NativeLocationTracker(
@@ -49,5 +50,10 @@ private fun Location.toCurrentPosition(): CurrentPosition {
         longitude = longitude,
         accuracyMeters = if (hasAccuracy()) accuracy else null,
         speedKmh = if (hasSpeed()) speed * 3.6f else null,
+        elapsedRealtimeMillis = if (elapsedRealtimeNanos > 0L) {
+            elapsedRealtimeNanos / 1_000_000L
+        } else {
+            SystemClock.elapsedRealtime()
+        },
     )
 }
