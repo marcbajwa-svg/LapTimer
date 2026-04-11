@@ -19,7 +19,6 @@ object TrackRepository {
         latitude = 47.3043,
         longitude = 17.0467,
         suggestionRadiusMeters = 2_500,
-        distanceLabel = "1.1 km away",
     )
 
     val presets = listOf(

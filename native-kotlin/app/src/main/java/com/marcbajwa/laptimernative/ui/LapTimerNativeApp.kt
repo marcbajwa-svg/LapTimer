@@ -224,7 +224,7 @@ fun LapTimerNativeApp() {
     var locationPermissionGranted by remember { mutableStateOf(context.hasLocationPermission()) }
 
     val copy = if (language == AppLanguage.DE) germanCopy else englishCopy
-    val nearbyTrack = TrackRepository.findNearbyTrack(currentPosition) ?: TrackRepository.nearbySuggestion
+    val nearbyTrack = TrackRepository.findNearbyTrack(currentPosition)
     val liveSnapshot = TrackRepository.liveSnapshot.copy(
         gpsStatus = when {
             !locationPermissionGranted -> copy.gpsPermissionNeeded
@@ -307,6 +307,7 @@ fun LapTimerNativeApp() {
                     presets = TrackRepository.presets,
                     selectedTrack = selectedTrack,
                     locationPermissionGranted = locationPermissionGranted,
+                    locationStatus = liveSnapshot.gpsStatus,
                     onRequestLocationPermission = {
                         locationPermissionLauncher.launch(
                             arrayOf(
@@ -420,10 +421,11 @@ private fun HomeScreen(
 @Composable
 private fun SetupScreen(
     copy: NativeCopy,
-    nearbyTrack: TrackPreset,
+    nearbyTrack: TrackPreset?,
     presets: List<TrackPreset>,
     selectedTrack: TrackPreset,
     locationPermissionGranted: Boolean,
+    locationStatus: String,
     onRequestLocationPermission: () -> Unit,
     onSelectTrack: (TrackPreset) -> Unit,
     onGoLive: () -> Unit,
@@ -444,13 +446,23 @@ private fun SetupScreen(
         item {
             CardBlock(title = copy.nearbyTitle, subtitle = copy.nearbySubtitle) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(nearbyTrack.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Text(nearbyTrack.markerLabel, color = Color(0xFF5F5A52))
-                    Text(nearbyTrack.distanceLabel ?: "--", color = Color(0xFF345F49), fontWeight = FontWeight.Bold)
+                    if (nearbyTrack == null) {
+                        Text(copy.noNearbyTrack, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (locationPermissionGranted) locationStatus else copy.gpsPermissionNeeded,
+                            color = Color(0xFF5F5A52),
+                        )
+                    } else {
+                        Text(nearbyTrack.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(nearbyTrack.markerLabel, color = Color(0xFF5F5A52))
+                        Text(nearbyTrack.distanceLabel ?: "--", color = Color(0xFF345F49), fontWeight = FontWeight.Bold)
+                    }
                     if (!locationPermissionGranted) {
                         SecondaryAction(label = copy.requestGpsPermission, onClick = onRequestLocationPermission)
                     }
-                    PrimaryAction(label = copy.useSuggestedTrack, onClick = { onSelectTrack(nearbyTrack) })
+                    if (nearbyTrack != null) {
+                        PrimaryAction(label = copy.useSuggestedTrack, onClick = { onSelectTrack(nearbyTrack) })
+                    }
                     SecondaryAction(label = copy.setManualStartPoint, onClick = {})
                 }
             }
