@@ -12,11 +12,15 @@ class LeanAngleTracker(
     private val onRollDegrees: (Float) -> Unit,
 ) : SensorEventListener {
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private val rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
+        ?: sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+    private val fallbackAccelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private val rotationMatrix = FloatArray(9)
+    private val orientationAngles = FloatArray(3)
     private var smoothedRollDegrees: Float? = null
 
     fun start() {
-        accelerometer?.let { sensor ->
+        (rotationSensor ?: fallbackAccelerometer)?.let { sensor ->
             sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
         }
     }
@@ -26,9 +30,11 @@ class LeanAngleTracker(
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        val x = event.values[0]
-        val y = event.values[1]
-        val rollDegrees = Math.toDegrees(atan2(x.toDouble(), y.toDouble())).toFloat()
+        val rollDegrees = when (event.sensor.type) {
+            Sensor.TYPE_GAME_ROTATION_VECTOR,
+            Sensor.TYPE_ROTATION_VECTOR -> event.rotationVectorRollDegrees()
+            else -> event.accelerometerRollDegrees()
+        }
         val smoothed = smoothedRollDegrees?.let { previous ->
             previous + (normalizeDegrees(rollDegrees - previous) * 0.15f)
         } ?: rollDegrees
@@ -38,6 +44,18 @@ class LeanAngleTracker(
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
+    private fun SensorEvent.rotationVectorRollDegrees(): Float {
+        SensorManager.getRotationMatrixFromVector(rotationMatrix, values)
+        SensorManager.getOrientation(rotationMatrix, orientationAngles)
+        return Math.toDegrees(orientationAngles[2].toDouble()).toFloat()
+    }
+
+    private fun SensorEvent.accelerometerRollDegrees(): Float {
+        val x = values[0]
+        val y = values[1]
+        return Math.toDegrees(atan2(x.toDouble(), y.toDouble())).toFloat()
+    }
 }
 
 fun normalizeDegrees(degrees: Float): Float {
