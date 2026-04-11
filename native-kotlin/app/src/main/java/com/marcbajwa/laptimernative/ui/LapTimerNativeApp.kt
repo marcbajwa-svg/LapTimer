@@ -519,8 +519,9 @@ fun LapTimerNativeApp() {
                         }
                     },
                     onToggleTelemetry = {
-                        telemetryEnabled = !telemetryEnabled
-                        setupStatusMessage = if (!telemetryEnabled) {
+                        val nextTelemetryEnabled = !telemetryEnabled
+                        telemetryEnabled = nextTelemetryEnabled
+                        setupStatusMessage = if (nextTelemetryEnabled) {
                             copy.telemetryEnabled
                         } else {
                             copy.telemetryDisabled
