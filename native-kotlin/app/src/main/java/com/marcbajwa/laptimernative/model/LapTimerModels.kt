@@ -16,6 +16,8 @@ data class TrackPreset(
     val latitude: Double,
     val longitude: Double,
     val suggestionRadiusMeters: Int,
+    val startHeadingDegrees: Double? = null,
+    val startLineHalfWidthMeters: Double = 35.0,
     val distanceLabel: String? = null,
 )
 

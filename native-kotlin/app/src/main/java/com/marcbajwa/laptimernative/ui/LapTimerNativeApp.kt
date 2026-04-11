@@ -390,7 +390,7 @@ fun LapTimerNativeApp() {
                             else -> {
                                 val position = requireNotNull(currentPosition)
                                 val track = TrackPreset(
-                                    id = "manual-start",
+                                    id = "manual-start-${position.elapsedRealtimeMillis}",
                                     name = copy.manualTrackName,
                                     country = copy.manualTrackCountry,
                                     markerLabel = "${copy.manualTrackMarker} (${position.formatCoordinates()})",
@@ -398,6 +398,8 @@ fun LapTimerNativeApp() {
                                     latitude = position.latitude,
                                     longitude = position.longitude,
                                     suggestionRadiusMeters = 100,
+                                    startHeadingDegrees = null,
+                                    startLineHalfWidthMeters = 35.0,
                                     distanceLabel = TrackRepository.formatAccuracy(position),
                                 )
                                 manualTrack = track

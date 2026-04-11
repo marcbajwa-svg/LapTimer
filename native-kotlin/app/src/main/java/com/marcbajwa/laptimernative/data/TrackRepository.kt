@@ -19,6 +19,7 @@ object TrackRepository {
         latitude = 47.3043,
         longitude = 17.0467,
         suggestionRadiusMeters = 2_500,
+        startHeadingDegrees = 80.0,
     )
 
     val presets = listOf(
@@ -32,6 +33,7 @@ object TrackRepository {
             latitude = 47.9461,
             longitude = 7.4296,
             suggestionRadiusMeters = 2_000,
+            startHeadingDegrees = 20.0,
         ),
         TrackPreset(
             id = "hockenheimring",
@@ -42,6 +44,7 @@ object TrackRepository {
             latitude = 49.3278,
             longitude = 8.5658,
             suggestionRadiusMeters = 2_500,
+            startHeadingDegrees = 105.0,
         ),
     )
 
